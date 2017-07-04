@@ -11,7 +11,7 @@ folder_data = '/scratch/dong.r/Dataset/OCR/data'
 
 
 def split_data_with_error_rate(error_ratio, split_id):
-    folder_out = join(folder_data, 'char_date_' + str(error_ratio) + '_' + str(split_id))
+    folder_out = join(folder_data, 'char_date_' + str(error_ratio) + '_' + str(split_id)) + '_new'
     with open(join(folder_out, 'train.x.txt'), 'r') as f_:
         list_x = f_.readlines()
     with open(join(folder_out, 'train.y.txt'), 'r') as f_:
@@ -48,4 +48,4 @@ def split_data_with_error_rate(error_ratio, split_id):
             for j in index[i]:
                 f_.write(list_y[j])
 
-split_data_with_error_rate(25, 0)
+split_data_with_error_rate(50, 0)

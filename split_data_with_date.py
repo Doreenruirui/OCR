@@ -43,7 +43,7 @@ def write_file(error_ratio, split_id):
         with open(join(folder_out, prefix + '.y.txt'), 'w') as f_:
             for cur_id in data_id:
                 f_.write(y_list[cur_id] + '\n')
-    dict_id = load_obj(join(folder_data, 'date_split_' + str(error_ratio) + '_' + str(split_id)))
+    dict_id = load_obj(join(folder_data, 'date_split_' + str(split_id)))
     train_date = dict_id['train_date']
     test_date = dict_id['test_date']
     # dev_date = dict_id['dev_date']
@@ -78,7 +78,7 @@ def write_file(error_ratio, split_id):
 
     print len(x_list)
     print len(y_list)
-    folder_out = join(folder_data, 'char_date_' + str(error_ratio) + '_' + str(split_id)+'_new')
+    folder_out = join(folder_data, 'char_date_' + str(error_ratio) + '_' + str(split_id)+'_clear')
     if not exists(folder_out):
         os.makedirs(folder_out)
     write_file('train', train_id)
@@ -107,7 +107,7 @@ def get_text_for_lm(error_ratio, split_id):
 
 def main():
     train_rate = 0.8
-    error_rate = 50
+    error_rate = 25
     split = 0
     # split_dataset_with_date(train_ratio=train_rate, error_ratio=error_rate, split_id=split)
     write_file(error_ratio=error_rate, split_id=split)
