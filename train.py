@@ -24,40 +24,19 @@ import sys
 import time
 import random
 import json
+from os.path import join as pjoin
 
 import numpy as np
 from six.moves import xrange
 import tensorflow as tf
 
-import nlc_model_global_pre as nlc_model
-# import nlc_model
-import nlc_data
-
-from util import pair_iter
-from util import get_tokenizer
+import nlc_model as nlc_model
+from flag import FLAGS
+from util import pair_iter, initialize_vocabulary
+import util
 
 import logging
 logging.basicConfig(level=logging.INFO)
-
-tf.app.flags.DEFINE_float("learning_rate", 0.0003, "Learning rate.")
-tf.app.flags.DEFINE_float("learning_rate_decay_factor", 0.95, "Learning rate decays by this much.")
-tf.app.flags.DEFINE_float("max_gradient_norm", 10.0, "Clip gradients to this norm.")
-tf.app.flags.DEFINE_float("dropout", 0.15, "Fraction of units randomly dropped on non-recurrent connections.")
-tf.app.flags.DEFINE_integer("batch_size", 128, "Batch size to use during training.")
-tf.app.flags.DEFINE_integer("epochs", 40, "Number of epochs to train.")
-tf.app.flags.DEFINE_integer("size", 400, "Size of each model layer.")
-tf.app.flags.DEFINE_integer("num_layers", 3, "Number of layers in the model.")
-tf.app.flags.DEFINE_integer("max_vocab_size", 40000, "Vocabulary size limit.")
-#tf.app.flags.DEFINE_integer("max_seq_len", 200, "Maximum sequence length.")
-tf.app.flags.DEFINE_integer("max_seq_len", 100, "Maximum sequence length.")
-tf.app.flags.DEFINE_string("data_dir", "/tmp", "Data directory")
-tf.app.flags.DEFINE_string("train_dir", "/tmp", "Training directory.")
-tf.app.flags.DEFINE_string("tokenizer", "CHAR", "BPE / CHAR / WORD.")
-tf.app.flags.DEFINE_string("optimizer", "adam", "adam / sgd")
-tf.app.flags.DEFINE_integer("print_every", 1, "How many iterations to do per print.")
-
-FLAGS = tf.app.flags.FLAGS
-
 
 def create_model(session, vocab_size, forward_only):
     model = nlc_model.NLCModel(
@@ -66,22 +45,21 @@ def create_model(session, vocab_size, forward_only):
         forward_only=forward_only, optimizer=FLAGS.optimizer)
     ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
     num_epoch = 0
-    # if ckpt and tf.gfile.Exists(ckpt.model_checkpoint_path):
-    #   logging.info("Reading model parameters from %s" % ckpt.model_checkpoint_path)
-    #   model.saver.restore(session, ckpt.model_checkpoint_path)
-    #   num_epoch = int(ckpt.model_checkpoint_path.split('-')[1])
-    #   print (num_epoch)
-    # else:
-    logging.info("Created model with fresh parameters.")
-    session.run(tf.initialize_all_variables())
-    logging.info('Num params: %d' % sum(v.get_shape().num_elements() for v in tf.trainable_variables()))
-
+    if ckpt and tf.gfile.Exists(ckpt.model_checkpoint_path):
+        logging.info("Reading model parameters from %s" % ckpt.model_checkpoint_path)
+        model.saver.restore(session, ckpt.model_checkpoint_path)
+        num_epoch = int(ckpt.model_checkpoint_path.split('-')[1])
+        print (num_epoch)
+    else:
+        logging.info("Created model with fresh parameters.")
+        session.run(tf.initialize_all_variables())
+        logging.info('Num params: %d' % sum(v.get_shape().num_elements() for v in tf.trainable_variables()))
     return model, num_epoch
 
 
 def validate(model, sess, x_dev, y_dev):
     valid_costs, valid_lengths = [], []
-    for source_tokens, source_mask, target_tokens, target_mask in pair_iter(x_dev, y_dev, FLAGS.batch_size, FLAGS.num_layers):
+    for source_tokens, source_mask, target_tokens, target_mask in pair_iter(x_dev, y_dev, FLAGS.batch_size, FLAGS.num_layers, sort_and_shuffle=False):
         cost = model.test(sess, source_tokens, source_mask, target_tokens, target_mask)
         valid_costs.append(cost * target_mask.shape[1])
         valid_lengths.append(np.sum(target_mask[1:, :]))
@@ -92,21 +70,20 @@ def validate(model, sess, x_dev, y_dev):
 def train():
     """Train a translation model using NLC data."""
     # Prepare NLC data.
-    logging.info("Preparing NLC data in %s" % FLAGS.data_dir)
-
-    x_train, y_train, x_dev, y_dev, vocab_path = nlc_data.prepare_nlc_data(
-        FLAGS.data_dir, FLAGS.max_vocab_size,
-        tokenizer=get_tokenizer(FLAGS))
-    vocab, _ = nlc_data.initialize_vocabulary(vocab_path)
+    logging.info("Get NLC data in %s" % FLAGS.data_dir)
+    x_train = pjoin(FLAGS.data_dir, 'train.ids.x')
+    y_train = pjoin(FLAGS.data_dir, 'train.ids.y')
+    x_dev = pjoin(FLAGS.data_dir, FLAGS.dev + '.ids.x')
+    y_dev = pjoin(FLAGS.data_dir, FLAGS.dev + '.ids.y')
+    vocab_path = pjoin(FLAGS.data_dir, "vocab.dat")
+    vocab, _ = initialize_vocabulary(vocab_path)
     vocab_size = len(vocab)
     logging.info("Vocabulary size: %d" % vocab_size)
-    FLAGS.print_every=100
     if not os.path.exists(FLAGS.train_dir):
         os.makedirs(FLAGS.train_dir)
     file_handler = logging.FileHandler("{0}/log.txt".format(FLAGS.train_dir))
     logging.getLogger().addHandler(file_handler)
 
-    print(vars(FLAGS))
     with open(os.path.join(FLAGS.train_dir, "flags.json"), 'w') as fout:
         json.dump(FLAGS.__flags, fout)
 
@@ -114,7 +91,7 @@ def train():
         logging.info("Creating %d layers of %d units." % (FLAGS.num_layers, FLAGS.size))
         model, epoch = create_model(sess, vocab_size, False)
 
-        # logging.info('Initial validation cost: %f' % validate(model, sess, x_dev, y_dev))
+        logging.info('Initial validation cost: %f' % validate(model, sess, x_dev, y_dev))
 
         if False:
             tic = time.time()
@@ -123,7 +100,6 @@ def train():
             toc = time.time()
             print ("Number of params: %d (retreival took %f secs)" % (num_params, toc - tic))
 
-        #epoch = 0
         best_epoch = 0
         previous_losses = []
         exp_cost = None
@@ -142,17 +118,8 @@ def train():
                 # Get a batch and make a step.
                 tic = time.time()
 
-                grad_norm, cost, param_norm, gradients, pre, prob1, prob2 = model.train(sess, source_tokens, source_mask, target_tokens, target_mask)
-                names = [v.name for v in tf.trainable_variables()]
-                num_v = len(names)
-                max_gradients = [np.max(gradients[0][0]), np.max(gradients[1][0])] + [np.max(gradients[j]) for j in range(2, num_v)]
+                grad_norm, cost, param_norm = model.train(sess, source_tokens, source_mask, target_tokens, target_mask)
 
-                mean_gradients = [np.mean(gradients[0][0]), np.mean(gradients[1][0])] + [np.mean(gradients[j]) for j in range(2, num_v)]
-                analysis = [(i, names[i], max_gradients[i], mean_gradients[i]) for i in range(num_v) if (max_gradients[i]) > 10]
-                if np.isnan(grad_norm) or np.isinf(grad_norm):
-                    print(pre)
-                    print(prob1)
-                    print(prob2)
                 toc = time.time()
                 iter_time = toc - tic
                 total_iters += np.sum(target_mask)

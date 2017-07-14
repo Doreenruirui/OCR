@@ -2,6 +2,7 @@
 
 import pywrapfst as fst
 import numpy as np
+from os.path import join as pjoin
 import subprocess
 # from util_thread import split_task
 
@@ -10,30 +11,21 @@ dict_char2id = {}
 dict_id2char = {}
 dict_word2id = {}
 dict_id2word = {}
-file_voc = '/scratch/dong.r/Dataset/OCR/voc/ascii.syms'
-tbl = fst.SymbolTable.read_text(file_voc)
-lm = fst.Fst.read('/scratch/dong.r/Dataset/OCR/lm/char/richmond/train.mod')
-concat_f=fst.Fst.read('/scratch/dong.r/Dataset/OCR/lm/concat.fst')
+file_voc = ''
+tbl = None
+lm = None
+concat_f=None
 list_res = []
 
 
-def split_task(pool, task, list_paras):
-    list_input = []
-    ntask = len(list_paras[0])
-    ninput = len(list_paras)
-    for x in range(ntask):
-        cur_input = (x, )
-        for i in range(ninput):
-            cur_input += (list_paras[i][x], )
-        list_input.append(cur_input)
-    results = pool.map(task, list_input)
-    res = [None for i in range(ntask)]
-    for i in range(ntask):
-        thread_num, cur_res = results[i]
-        res[thread_num] = cur_res
-    if None in res:
-        raise 'Something Wrong!'
-    return res
+def initialize():
+    global lm, tbl, concat_f, file_voc
+    file_voc = '/scratch/dong.r/Dataset/OCR/voc/ascii.syms'
+    lm = fst.Fst.read('/scratch/dong.r/Dataset/OCR/lm/char/richmond/train.mod')
+    tbl = fst.SymbolTable.read_text(file_voc)
+    lm = fst.Fst.read('/scratch/dong.r/Dataset/OCR/lm/char/richmond/train.mod')
+    concat_f=fst.Fst.read('/scratch/dong.r/Dataset/OCR/lm/concat.fst')
+    get_dict()
 
 
 def get_dict():
@@ -42,6 +34,7 @@ def get_dict():
         char, cid = line.strip().split('\t')
         dict_char2id[char] = int(cid)
         dict_id2char[int(cid)] = char
+
 
 def get_voc():
     global dict_word2id, dict_id2word
@@ -52,15 +45,10 @@ def get_voc():
 
 
 def sentence_fst(sent, pb):
+    global dict_char2id
     f = fst.Fst()
     s = f.add_state()
     f.set_start(s)
-    if len(sent) == 0:
-        n = f.add_state()
-        f.set_final(n, 0.0)
-        cur_id = dict_char2id['<epsilon>']
-        f.add_arc(s, fst.Arc(cur_id, cur_id, -pb, n))
-        return f
     for char in sent:
         n = f.add_state()
         if char != ' ':
@@ -77,13 +65,58 @@ def sentence_fst(sent, pb):
     # f.write()
     return f
 
+def merge_fst_two(f1, f2):
+    return fst.minimize(fst.determinize(f1.union(f2).rmepsilon()))
 
 
-# def thread_sentence_fst(paras):
-#     thread_no, sent, pb = paras
-#     f = sentence_fst(sent, pb)
-#     #list_res[thread_no] = f
-#     print thread_no
+def concat_fst_two(f1, f2):
+    return (f1.concat(concat_f)).concat(f2)
+
+
+def thread_merge_fst(paras):
+    thread_no, filename1, filename2, filename = paras
+    f1 = read_fst(filename1)
+    f2 = read_fst(filename2)
+    f = merge_fst_two(f1, f2)
+    f.write(filename)
+
+
+def thread_concat_fst(paras):
+    thread_no, filename1, filename2, filename = paras
+    f1 = read_fst(filename1)
+    f2 = read_fst(filename2)
+    f = concat_fst_two(f1, f2)
+    f.write(filename)
+
+
+def thread_list_concat_fst(paras):
+    list_file_name= paras
+    final = read_fst(list_file_name[0])
+    for fn in list_file_name[1:]:
+        f = read_fst(fn)
+        final = final.concat(concat_f)
+        final = final.concat(f)
+    return final
+    # file_name = '.'.join(list_file_name[0].split('.')[:-1])
+    # final.write(file_name)
+
+
+def thread_list_combine_fst(paras):
+    list_file_name= paras
+    final = read_fst(list_file_name[0])
+    for fn in list_file_name[1:]:
+        cur_fst = read_fst(fn)
+        final = fst.determinize(cur_fst.union(final).rmepsilon())
+    final = final.minimize()
+    file_name = '.'.join(list_file_name[0].split('.')[:-1])
+    final.write(file_name)
+
+
+def thread_sentence_fst(paras):
+    thread_no, sent, pb, file_name = paras
+    f = sentence_fst(sent, pb)
+    f.write(file_name+'.'+thread_no)
+    print thread_no
 
 
 def combine_fst(list_fst):
@@ -153,17 +186,9 @@ def get_fst_for_output(outputs, probs, w):
 
 def concat_fst(list_fst):
     final = list_fst[0]
-    # concat_symbol = ['-', '<space>', '<epsilon>']
     for f in list_fst[1:]:
         final = final.concat(concat_f)
         final = final.concat(f)
-    # for f in list_fst[1:]:
-    #     cur_nstate = final.num_states()
-    #     final = final.concat(f)
-    #     final.delete_arcs(cur_nstate - 1)
-    #     for sym in concat_symbol:
-    #         cur_id = dict_char2id[sym]
-    #         final.add_arc(cur_nstate - 1, fst.Arc(cur_id, cur_id, 0.0, cur_nstate))
     return final
 
 
@@ -182,28 +207,25 @@ def get_fst_for_group_sent(group, group_prob, w):
     return string
 
 
-def get_fst_for_group(pro_id, file_no, folder_data, file_name, w):
-    #get_fst_for_group 1 4 richmond/0/0/50/train/100 test.o.txt.0_1000 1000
-    start_line=pro_id[0]
-    subprocess.call(['get_fst_for_group', str(pro_id[0] + 1), str(pro_id[-1] + 1), folder_data, file_name])
-    subprocess.call(['sh', '/home/dong.r/nlc-master/run_group.%d.%d' % (file_no, start_line)])
-    subprocess.call(['rm', '/home/dong.r/nlc-master/run_group.%d.%d' % (file_no, start_line)])
-    f = read_fst(folder_data + '/fst.tmp.0.%d.score' % start_line)
-    return print_path(f)
-
-    # list_fst = []
-    # for i in range(len(group)):
-    #     cur_group = group[i]
-    #     cur_prob = group_prob[i]
-    #     cur_prob = [ele * w for ele in cur_prob]
-    #     list_fst.append(list_sentence_fst(cur_group, cur_prob, w))
-    # final = concat_fst(list_fst)
-    # set_symbol(final)
-    # final=fst.shortestpath(fst.intersect(final, lm)).rmepsilon()
-    # string1 = print_path(final)
-    # fst2 = read_fst('/scratch/dong.r/Dataset/OCR/richmond/0/0/50/train/100/fst.tmp.0.%d.score' % pro_id)
-    # string2 = print_path(fst2)
-
+def get_fst_for_group_paral(pool, group, group_prob, pro_id, beam_size, file_no, folder_data, w):
+    start_line = pro_id
+    len_group=len(pro_id)
+    len_sent = len(group)
+    list_fst_file = [pjoin(folder_data, 'fst.tmp.%d.%d.%d' % (file_no, i, j))
+                     for i in range(start_line, start_line + len_group)
+                     for j in range(beam_size)]
+    list_index = np.arange(len_sent, dtype=int).tolist()
+    pool.map(thread_sentence_fst, thread_sentence_fst, zip(list_index, group, group_prob, list_fst_file))
+    pool.map(thread_list_combine_fst, [list_fst_file[k * beam_size: (k + 1) * beam_size] for k in range(len_group)])
+    list_concat_file = [pjoin(folder_data, 'fst.tmp.%d.%d' % (file_no, i))
+                     for i in range(start_line, start_line + len_group)]
+    final = thread_list_concat_fst(list_concat_file)
+    set_symbol(final)
+    final = fst.shortestpath(fst.intersect(final, lm)).rmepsilon()
+    string = print_path(final)
+    subprocess.call(['rm', pjoin(folder_data, 'fst.tmp.*')])
+    # f = read_fst(folder_data + '/fst.tmp.0.%d.score' % start_line)
+    return string
 
 
 

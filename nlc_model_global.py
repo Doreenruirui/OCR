@@ -36,7 +36,6 @@ from tensorflow.python.ops.math_ops import tanh
 
 import nlc_data
 
-
 def get_optimizer(opt):
     if opt == "adam":
         optfn = tf.train.AdamOptimizer
@@ -45,7 +44,6 @@ def get_optimizer(opt):
     else:
         assert(False)
     return optfn
-
 
 class GRUCellAttn(rnn_cell.GRUCell):
     def __init__(self, num_units, encoder_output, attn, scope=None):

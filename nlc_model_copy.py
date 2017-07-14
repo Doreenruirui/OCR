@@ -353,64 +353,64 @@ class NLCModel(object):
         self.beam_trans = ret_vars[5]
 
 
-    def setup_loss(self):
-        with vs.variable_scope("Logistic"):
-            doshape = tf.shape(self.decoder_output)
-            T1 = tf.shape(self.encoder_output)[0]
-            T2, batch_size = doshape[0], doshape[1]
-            do2d = tf.reshape(self.decoder_output, [-1, self.size])
-            en2d = tf.reshape(self.encoder_output, [-1, self.size])
-            # with vs.variable_scope("Predict"):
-            #     pre_logits2d = rnn_cell._linear(do2d, 1, True, 1.0)
-            # self.pre2d = tf.reshape(tf.nn.sigmoid(pre_logits2d), [T2 * batch_size, 2])
-            with vs.variable_scope("Copy"):
-                copy2d_trans = tf.reshape(tanh(rnn_cell._linear(en2d, self.size, True, 1.0)),
-                                          [T1, batch_size, -1])
-            copy2d_mask = copy2d_trans * tf.to_float(tf.reshape(self.source_mask,
-                                                            [T1, batch_size, 1]))
-            copy2d_out = tf.reshape(self.decoder_output, [T2, 1, batch_size, -1])
-            copy2d = tf.transpose(tf.reduce_sum(copy2d_out * copy2d_mask, reduction_indices=3), [0, 2, 1])
-            indices_1 = tf.reshape(tf.tile(tf.reshape(tf.range(0, T2, 1), [T2, 1, 1]), [1, batch_size, T1]), [-1])
-            indices_2 = tf.reshape(tf.tile(tf.reshape(tf.range(0, batch_size, 1),
-                                                      [1, batch_size, 1]),
-                                           [T2, 1, T1]),
-                                   [-1])
-            indices_3 = tf.reshape(tf.transpose(tf.tile(tf.reshape(self.source_tokens,
-                                                                   [1, T1, batch_size]),
-                                                        [T2, 1, 1]),
-                                                [0, 2, 1]),
-                                   [-1])
-            prob_shape = tf.reshape(T2 * batch_size * self.vocab_size, [1])
-            copy_prob = tf.zeros(prob_shape, dtype=tf.float32)
-            linear_indices = indices_1 * batch_size * self.vocab_size + indices_2 * self.vocab_size + indices_3
-            flat_w_copy = tf.reshape(copy2d, [-1])
-            unchanged_indices = tf.range(tf.size(copy_prob))
-            flat_vocab_prob = tf.dynamic_stitch([unchanged_indices, linear_indices], [copy_prob, flat_w_copy])
-            vocab_copy = tf.reshape(flat_vocab_prob, [T2 * batch_size, self.vocab_size])
-            self.prob_copy = tf.nn.softmax(vocab_copy)
-            with vs.variable_scope("Error"):
-                vocab_error = rnn_cell._linear(do2d, self.vocab_size, True, 1.0)
-            self.prob_error = tf.nn.softmax(vocab_error)
-            self.total_prob = self.pre2d * self.prob_copy + (1 - self.pre2d) * self.prob_error
-            outputs2d = tf.log(tf.clip_by_value(self.total_prob, 1e-10, 1.0))
-            # max_copy = tf.max(vocab_copy, reduction_indices=2, keep_dims=True)
-            # max_error = tf.max(vocab_copy, reduction_indices=2, keep_dims=True)
-            # max_v = tf.max(tf.concat(2, [max_copy, max_error]), reduction_indices=2, keep_dims=True)
-            # prob_copy = tf.exp(vocab_copy - max_v)
-            # prob_error = tf.exp(vocab_error - max_v)
-            # vocab_prob = prob_copy + prob_error
-            # vocab_prob /= (1e-6 + tf.reduce_sum(vocab_prob, reduction_indices=2, keep_dims=True))
-            # outputs2d = tf.reshape(tf.nn.log(vocab_prob + 1e-20), [-1, self.vocab_size])
-            self.outputs = tf.reshape(outputs2d, tf.pack([T2, batch_size, self.vocab_size]))
-
-
-            targets_no_GO = tf.slice(self.target_tokens, [1, 0], [-1, -1])
-            masks_no_GO = tf.slice(self.target_mask, [1, 0], [-1, -1])
-            labels1d = tf.reshape(tf.pad(targets_no_GO, [[0, 1], [0, 0]]), [-1])
-            labels2d = tf.one_hot(labels1d, depth=self.vocab_size, on_value=1.0, off_value=0.0, axis=-1)
-            mask1d = tf.reshape(tf.pad(masks_no_GO, [[0, 1], [0, 0]]), [-1])
-            losses2d = -tf.reduce_sum(outputs2d * labels2d, reduction_indices=1) * tf.to_float(mask1d)
-            self.losses = tf.reduce_sum(losses2d) / tf.to_float(batch_size)
+    # def setup_loss(self):
+    #     with vs.variable_scope("Logistic"):
+    #         doshape = tf.shape(self.decoder_output)
+    #         T1 = tf.shape(self.encoder_output)[0]
+    #         T2, batch_size = doshape[0], doshape[1]
+    #         do2d = tf.reshape(self.decoder_output, [-1, self.size])
+    #         en2d = tf.reshape(self.encoder_output, [-1, self.size])
+    #         # with vs.variable_scope("Predict"):
+    #         #     pre_logits2d = rnn_cell._linear(do2d, 1, True, 1.0)
+    #         # self.pre2d = tf.reshape(tf.nn.sigmoid(pre_logits2d), [T2 * batch_size, 2])
+    #         with vs.variable_scope("Copy"):
+    #             copy2d_trans = tf.reshape(tanh(rnn_cell._linear(en2d, self.size, True, 1.0)),
+    #                                       [T1, batch_size, -1])
+    #         copy2d_mask = copy2d_trans * tf.to_float(tf.reshape(self.source_mask,
+    #                                                         [T1, batch_size, 1]))
+    #         copy2d_out = tf.reshape(self.decoder_output, [T2, 1, batch_size, -1])
+    #         copy2d = tf.transpose(tf.reduce_sum(copy2d_out * copy2d_mask, reduction_indices=3), [0, 2, 1])
+    #         indices_1 = tf.reshape(tf.tile(tf.reshape(tf.range(0, T2, 1), [T2, 1, 1]), [1, batch_size, T1]), [-1])
+    #         indices_2 = tf.reshape(tf.tile(tf.reshape(tf.range(0, batch_size, 1),
+    #                                                   [1, batch_size, 1]),
+    #                                        [T2, 1, T1]),
+    #                                [-1])
+    #         indices_3 = tf.reshape(tf.transpose(tf.tile(tf.reshape(self.source_tokens,
+    #                                                                [1, T1, batch_size]),
+    #                                                     [T2, 1, 1]),
+    #                                             [0, 2, 1]),
+    #                                [-1])
+    #         prob_shape = tf.reshape(T2 * batch_size * self.vocab_size, [1])
+    #         copy_prob = tf.zeros(prob_shape, dtype=tf.float32)
+    #         linear_indices = indices_1 * batch_size * self.vocab_size + indices_2 * self.vocab_size + indices_3
+    #         flat_w_copy = tf.reshape(copy2d, [-1])
+    #         unchanged_indices = tf.range(tf.size(copy_prob))
+    #         flat_vocab_prob = tf.dynamic_stitch([unchanged_indices, linear_indices], [copy_prob, flat_w_copy])
+    #         vocab_copy = tf.reshape(flat_vocab_prob, [T2 * batch_size, self.vocab_size])
+    #         self.prob_copy = tf.nn.softmax(vocab_copy)
+    #         with vs.variable_scope("Error"):
+    #             vocab_error = rnn_cell._linear(do2d, self.vocab_size, True, 1.0)
+    #         self.prob_error = tf.nn.softmax(vocab_error)
+    #         self.total_prob = self.pre2d * self.prob_copy + (1 - self.pre2d) * self.prob_error
+    #         outputs2d = tf.log(tf.clip_by_value(self.total_prob, 1e-10, 1.0))
+    #         # max_copy = tf.max(vocab_copy, reduction_indices=2, keep_dims=True)
+    #         # max_error = tf.max(vocab_copy, reduction_indices=2, keep_dims=True)
+    #         # max_v = tf.max(tf.concat(2, [max_copy, max_error]), reduction_indices=2, keep_dims=True)
+    #         # prob_copy = tf.exp(vocab_copy - max_v)
+    #         # prob_error = tf.exp(vocab_error - max_v)
+    #         # vocab_prob = prob_copy + prob_error
+    #         # vocab_prob /= (1e-6 + tf.reduce_sum(vocab_prob, reduction_indices=2, keep_dims=True))
+    #         # outputs2d = tf.reshape(tf.nn.log(vocab_prob + 1e-20), [-1, self.vocab_size])
+    #         self.outputs = tf.reshape(outputs2d, tf.pack([T2, batch_size, self.vocab_size]))
+    #
+    #
+    #         targets_no_GO = tf.slice(self.target_tokens, [1, 0], [-1, -1])
+    #         masks_no_GO = tf.slice(self.target_mask, [1, 0], [-1, -1])
+    #         labels1d = tf.reshape(tf.pad(targets_no_GO, [[0, 1], [0, 0]]), [-1])
+    #         labels2d = tf.one_hot(labels1d, depth=self.vocab_size, on_value=1.0, off_value=0.0, axis=-1)
+    #         mask1d = tf.reshape(tf.pad(masks_no_GO, [[0, 1], [0, 0]]), [-1])
+    #         losses2d = -tf.reduce_sum(outputs2d * labels2d, reduction_indices=1) * tf.to_float(mask1d)
+    #         self.losses = tf.reduce_sum(losses2d) / tf.to_float(batch_size)
 
     def dropout(self, inp):
         return tf.nn.dropout(inp, self.keep_prob)

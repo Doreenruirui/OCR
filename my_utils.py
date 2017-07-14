@@ -1,12 +1,14 @@
 import numpy as np
 from os.path import join
+from multiprocessing import Pool
+from levenshtein import align_pair
 
 
 def error_rate(P, nthread, flag_char, list_x, list_y):
     dis_xy = align_pair(P, list_x, list_y, nthread, flag_char=flag_char)
     res = []
     for i in range(len(dis_xy)):
-        res.append(dis_xy[i], len(x[i]), len(y[i]))
+        res.append([dis_xy[i], len(list_x[i]), len(list_y[i])])
     return res
 
 
@@ -33,11 +35,14 @@ def read_lines(fn, list_str, begin, end):
             line_id += 1
 
 
-def error_rate_line(file_error, file_ocr, file_truth, begin, end, nthread=40, flag_char=1):
+def error_rate_line(file_error, file_ocr, file_truth, begin, end, nthread=40, flag_char=1, flag_strip=0):
     list_ocr = []
     list_truth = []
     read_lines(file_ocr, list_ocr, begin, end)
     read_lines(file_truth, list_truth, begin, end)
+    if flag_strip == 1:
+        list_ocr = [ele.strip() for ele in list_ocr]
+        list_truth = [ele.strip() for ele in list_truth]
     with open(file_error, 'w') as f_:
         P = Pool(nthread)
         res = error_rate(P, nthread, flag_char, list_ocr, list_truth)

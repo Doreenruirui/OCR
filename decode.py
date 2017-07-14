@@ -32,7 +32,7 @@ from os.path import join as pjoin
 
 # import kenlm
 
-import nlc_model_sample as nlc_model
+import nlc_model as nlc_model
 import nlc_data
 from util import get_tokenizer
 
@@ -207,12 +207,12 @@ def fix_sent(model, sess, sent):
     # De-tokenize
     beam_strs = detokenize(beam_toks, reverse_vocab)
     # Lattice-generation
-    # lattice = decode_lattice(beam_strs, probs, output)
+    lattice = decode_lattice(beam_strs, probs, output)
 
     # Language Model ranking
-    best_str = lm_rank(beam_strs, probs)
+    #best_str = lm_rank(beam_strs, probs)
     # Return
-    return best_str
+    return beam_strs, beam_toks, probs, lattice
 
 
 def decode():
@@ -239,9 +239,9 @@ def decode():
         while True:
             sent = raw_input("Enter a sentence: ")
 
-            output_sents = fix_sent(model, sess, sent)
-
-            print("Candidate: ", '\n'.join(output_sents[:10]))
+            o_sents, o_toks, o_probs, o_trans = fix_sent(model, sess, sent)
+            print('')
+            #print("Candidate: ", '\n'.join(output_sents[:10]))
             #print(lattice)
 
 

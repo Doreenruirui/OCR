@@ -130,9 +130,9 @@ class NLCModel(object):
         params = tf.trainable_variables()
         if not forward_only:
             opt = get_optimizer(optimizer)(self.learning_rate)
-            self.gradients = tf.gradients(self.losses, params)
-            clipped_gradients, _ = tf.clip_by_global_norm(self.gradients, max_gradient_norm)
-            self.gradient_norm = tf.global_norm(self.gradients)
+            gradients = tf.gradients(self.losses, params)
+            clipped_gradients, _ = tf.clip_by_global_norm(gradients, max_gradient_norm)
+            self.gradient_norm = tf.global_norm(gradients)
             self.param_norm = tf.global_norm(params)
             self.updates = opt.apply_gradients(
                 zip(clipped_gradients, params), global_step=self.global_step)
@@ -360,9 +360,9 @@ class NLCModel(object):
             T2, batch_size = doshape[0], doshape[1]
             do2d = tf.reshape(self.decoder_output, [-1, self.size])
             en2d = tf.reshape(self.encoder_output, [-1, self.size])
-            # with vs.variable_scope("Predict"):
-            #     pre_logits2d = rnn_cell._linear(do2d, 1, True, 1.0)
-            # self.pre2d = tf.reshape(tf.nn.sigmoid(pre_logits2d), [T2 * batch_size, 2])
+            #with vs.variable_scope("Predict"):
+            #    pre_logits2d = rnn_cell._linear(do2d, 1, True, 1.0)
+            #self.pre2d = tf.reshape(tf.nn.sigmoid(pre_logits2d), [T2 * batch_size, 1])
             with vs.variable_scope("Copy"):
                 copy2d_trans = tf.reshape(tanh(rnn_cell._linear(en2d, self.size, True, 1.0)),
                                           [T1, batch_size, -1])
@@ -387,20 +387,20 @@ class NLCModel(object):
             unchanged_indices = tf.range(tf.size(copy_prob))
             flat_vocab_prob = tf.dynamic_stitch([unchanged_indices, linear_indices], [copy_prob, flat_w_copy])
             vocab_copy = tf.reshape(flat_vocab_prob, [T2 * batch_size, self.vocab_size])
-            self.prob_copy = tf.nn.softmax(vocab_copy)
+            #self.prob_copy = tf.nn.softmax(vocab_copy)
             with vs.variable_scope("Error"):
                 vocab_error = rnn_cell._linear(do2d, self.vocab_size, True, 1.0)
-            self.prob_error = tf.nn.softmax(vocab_error)
-            self.total_prob = self.pre2d * self.prob_copy + (1 - self.pre2d) * self.prob_error
-            outputs2d = tf.log(tf.clip_by_value(self.total_prob, 1e-10, 1.0))
-            # max_copy = tf.max(vocab_copy, reduction_indices=2, keep_dims=True)
-            # max_error = tf.max(vocab_copy, reduction_indices=2, keep_dims=True)
-            # max_v = tf.max(tf.concat(2, [max_copy, max_error]), reduction_indices=2, keep_dims=True)
-            # prob_copy = tf.exp(vocab_copy - max_v)
-            # prob_error = tf.exp(vocab_error - max_v)
-            # vocab_prob = prob_copy + prob_error
-            # vocab_prob /= (1e-6 + tf.reduce_sum(vocab_prob, reduction_indices=2, keep_dims=True))
-            # outputs2d = tf.reshape(tf.nn.log(vocab_prob + 1e-20), [-1, self.vocab_size])
+            #self.prob_error = tf.nn.softmax(vocab_error)
+            #self.total_prob = self.pre2d * self.prob_copy + (1 - self.pre2d) * self.prob_error
+            #outputs2d = tf.log(tf.clip_by_value(self.total_prob, 1e-10, 1.0))
+            max_copy = tf.reduce_max(vocab_copy, reduction_indices=1, keep_dims=True)
+            max_error = tf.reduce_max(vocab_copy, reduction_indices=1, keep_dims=True)
+            max_v = tf.reduce_max(tf.concat(1, [max_copy, max_error]), reduction_indices=1, keep_dims=True)
+            prob_copy = tf.exp(vocab_copy - max_v)
+            prob_error = tf.exp(vocab_error - max_v)
+            vocab_prob = prob_copy + prob_error
+            vocab_prob /= (1e-6 + tf.reduce_sum(vocab_prob, reduction_indices=1, keep_dims=True))
+            outputs2d = tf.reshape(tf.log(tf.clip_by_value(vocab_prob, 1e-10, 1.0)), [-1, self.vocab_size])
             self.outputs = tf.reshape(outputs2d, tf.pack([T2, batch_size, self.vocab_size]))
 
 
@@ -478,12 +478,11 @@ class NLCModel(object):
         input_feed[self.keep_prob] = self.keep_prob_config
         self.set_default_decoder_state_input(input_feed, target_tokens.shape[1])
 
-        output_feed = [self.updates, self.gradient_norm, self.losses,
-                       self.param_norm, self.gradients, self.pre2d, self.prob_copy, self.prob_error]
+        output_feed = [self.updates, self.gradient_norm, self.losses, self.param_norm]
 
         outputs = session.run(output_feed, input_feed)
 
-        return outputs[1], outputs[2], outputs[3], outputs[4], outputs[5], outputs[6], outputs[7]
+        return outputs[1], outputs[2], outputs[3]
 
     def test(self, session, source_tokens, source_mask, target_tokens, target_mask):
         input_feed = {}

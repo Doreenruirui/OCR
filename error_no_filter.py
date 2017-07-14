@@ -29,7 +29,7 @@ import numpy as np
 from six.moves import xrange
 import tensorflow as tf
 
-import nlc_model
+import nlc_model_global as nlc_model
 import nlc_data_no_filter as nlc_data
 
 from util import pair_iter

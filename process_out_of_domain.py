@@ -71,9 +71,9 @@ def load_pairs_folder():
 
 
 def compute_error_rate(cat_name, begin, end):
-    folder_name = join(folder_data, dict_cat2namep[cat_name])
-    file_ocr = join(folder_name, 'pairs_x')
-    file_truth = join(folder_name, 'pairs_y')
+    folder_name = join(folder_data, dict_cat2name[cat_name])
+    file_ocr = join(folder_name, 'pair_x')
+    file_truth = join(folder_name, 'pair_y')
     folder_error = join(folder_name, 'error')
     if not exists(folder_error):
         os.makedirs(folder_error)
@@ -111,13 +111,13 @@ def write_file(cat_name, postfix):
         list_items = line.strip().split('\t')
         line2task.append(int(list_items[2]))
     line_id = 0
-    for line in file(join(folder_data, 'pair_' + postfix)):
+    for line in file(join(folder_data, folder_cat, 'pair_' + postfix)):
         if line2task[line_id] == 0:
-            f_train.write(x + '\n')
+            f_train.write(line)
         elif line2task[line_id] == 1:
-            f_test1.write(x + '\n')
+            f_test1.write(line)
         else:
-            f_test2.write(x + '\n')
+            f_test2.write(line)
         line_id += 1
     f_train.close()
     f_test1.close()

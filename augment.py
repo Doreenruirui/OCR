@@ -31,7 +31,7 @@ import tensorflow as tf
 from os.path import join as pjoin
 
 
-import nlc_model_sample as nlc_model
+import nlc_model_sample_global as nlc_model
 import nlc_data
 from util import get_tokenizer
 

@@ -165,11 +165,11 @@ def fix_sent(model, sess, sent):
     # De-tokenize
     beam_strs = detokenize(beam_toks, reverse_vocab)
     # Language Model ranking
-    # lattice = decode_lattice(beam_strs, probs, prob_trans)
+    lattice = decode_lattice(beam_strs, probs, prob_trans)
     #best_str = lm_rank(beam_strs, probs)
     # Return
     #return best_str
-    return beam_strs, probs
+    return beam_strs, probs, lattice
 
 
 
@@ -209,9 +209,9 @@ def decode():
     folder_out = pjoin(FLAGS.data_dir, str(FLAGS.beam_size))
     if not os.path.exists(folder_out):
         os.makedirs(folder_out)
-    f_o = open(pjoin(folder_out, 'dev.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+    #f_o = open(pjoin(folder_out, 'dev.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     
-    f_p = open(pjoin(folder_out, 'dev.p.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')# f_i = open(pjoin(FLAGS.data_dir, 'dev.i.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+    #f_p = open(pjoin(folder_out, 'dev.p.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')# f_i = open(pjoin(FLAGS.data_dir, 'dev.i.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     for line_id in range(FLAGS.start, FLAGS.end):
         line = lines[line_id]
         # sent = raw_input("Enter a sentence: ")
@@ -221,7 +221,7 @@ def decode():
             print(toc - tic)
             tic = time.time()
         sent = line.strip()
-        output_sents, output_probs = fix_sent(model, sess, sent)
+        output_sents, output_probs, lattice = fix_sent(model, sess, sent)
         
         #best_str = lm_rank(output_sents, output_probs)
         #print('align ...')
@@ -236,7 +236,7 @@ def decode():
         # for prob in output_probs:
         #     f_p.write('%.5f\n' % prob)
     # f_i.close()
-    f_o.close()
+    #f_o.close()
     # f_p.close()
 
 def main(_):

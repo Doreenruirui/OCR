@@ -30,14 +30,15 @@ from six.moves import xrange
 import tensorflow as tf
 from os.path import join as pjoin
 
-
 import nlc_model
+#import nlc_model_global as nlc_model
 import nlc_data
+#import nlc_data_no_filter as nlc_data
 from util import get_tokenizer
 from levenshtein import align_all, align
 from multiprocessing import Pool
 import kenlm
-
+import pdb
 
 tf.app.flags.DEFINE_float("learning_rate", 0.001, "Learning rate.")
 tf.app.flags.DEFINE_float("learning_rate_decay_factor", 0.95, "Learning rate decays by this much.")
@@ -226,10 +227,14 @@ def decode():
     for line_id in range(FLAGS.start, FLAGS.end):
         line = lines[line_id]
         sent = line.strip()
+        if len(sent) == 0:
+            f_o.write('\t\t\t\n')
+            continue
         output_sents, output_probs, best_str = fix_sent(pool, model, sess, sent)
+        cur_best = output_sents[0]
         min_dis, min_str = align_all(pool, truths[line_id], output_sents, nthread, flag_char=1)
         min_dis_word, min_str_word = align_all(pool, truths[line_id], output_sents, nthread, flag_char=0)
-        f_o.write('\t'.join(best_str) + '\t' + min_str + '\t' + min_str_word + '\t' + output_sents[0] + '\n')
+        f_o.write('\t'.join(best_str) + '\t' + min_str + '\t' + min_str_word + '\t' + cur_best + '\n')
         print(line_id)
         if line_id % 100 == 0:
             toc = time.time()

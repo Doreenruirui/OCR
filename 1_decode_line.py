@@ -60,31 +60,29 @@ def decode():
     pro_truth = []
     pro_prob = []
     pro_id=[]
-    pool = Pool(processes=nthread, initializer=get_dict)
-    get_dict()
+    initialize()
+    pool = Pool(processes=nthread, initializer=get_dict())
     f_o1 = open(pjoin(out_dir, dev + '.e1.txt.' + str(start) + '_' + str(end)), 'w')
     f_o2 = open(pjoin(out_dir, dev + '.e2.txt.' + str(start) + '_' + str(end)), 'w')
     for i in range(start, end):
         cur_out = [lines[k][0] for k in range(i * beam_size, (i + 1) * beam_size)]
-        cur_prob = [0 for k in range(i * beam_size, (i + 1) * beam_size)]
-        #cur_prob = [float(lines[k][1]) for k in range(i * beam_size, (i + 1) * beam_size)]
+        cur_prob = [float(lines[k][1]) for k in range(i * beam_size, (i + 1) * beam_size)]
         cur_truth = truths[i]
         cur_id = line_ids[i]
         cur_group_id = dict_id2group[cur_id]
         flag_process = 0
         if cur_group_id == process_group_id:
-            pro_group.append(cur_out)
-            pro_truth.append(cur_truth)
-            pro_prob.append(cur_prob)
+            pro_group += cur_out
+            pro_truth += cur_truth
+            pro_prob += cur_prob
             pro_id.append(i)
             if len(pro_id) == max_size:
                 flag_process = 1
         else:
             flag_process = 1
         if flag_process:
-            #ToDo: fst.shortestdistance(fst.intersect(f2, lm), reverse=True)[0]
-            # cor_str = get_fst_for_group(pro_id, start, data_dir, file_name, weight)
-            cur_str = get_fst_for_group_sent(pro_group, pro_prob, 1000)
+            cur_str = get_fst_for_group_paral(pool, pro_group, pro_prob, pro_id, beam_size, start, data_dir,  weight)
+            # cur_str = get_fst_for_group_sent(pro_group, pro_prob, 1000)
             group_char_dis = 0
             group_best_dis = 0
             group_len = 0
@@ -111,9 +109,9 @@ def decode():
             pro_id = []
             pro_prob = []
         if cur_group_id != process_group_id:
-            pro_group.append(cur_out)
-            pro_truth.append(cur_truth)
-            pro_prob.append(cur_prob)
+            pro_group += cur_out
+            pro_truth += cur_truth
+            pro_prob  += cur_prob
             pro_id.append(i)
             process_group_id = cur_group_id
     f_o1.close()
