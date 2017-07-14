@@ -64,24 +64,36 @@ def load_pair_dis():
 def load_pairs_rich():
     folder_origin_data = '/scratch/dong.r/Dataset/unprocessed/richmond'
     keys = ['b1', 'e1', 'b2', 'e2']
-    info_file = open(join(folder_data, 'pair_info'), 'w')
-    pair_file_x = open(join(folder_data, 'pair_x'), 'w')
-    pair_file_y = open(join(folder_data, 'pair_y'), 'w')
+    # info_file = open(join(folder_data, 'pair_info'), 'w')
+    # pair_file_x = open(join(folder_data, 'pair_x'), 'w')
+    # pair_file_y = open(join(folder_data, 'pair_y'), 'w')
     pair_file_z = open(join(folder_data, 'pair_z'), 'w')
     for line in file(join(folder_origin_data, 'pairs-n5.json')):
         cur_dict = json.loads(line.strip())
         for pair in cur_dict['pairs']:
-            str1 = re.sub('\n', ' ', pair['_1'].strip()).strip()
-            str2 = re.sub('\n', ' ', pair['_2'].strip()).strip()
-            str3 = ' '.join([ele for ele in re.sub('\n', ' ', pair['_2']).split() if len(ele.strip()) > 0])
-            pair_file_y.write(str1.encode('utf-8') + '\n')
-            pair_file_x.write(str2.encode('utf-8') + '\n')
+            # str1 = re.sub('\n', ' ', pair['_1'].strip()).strip()
+            # str2 = re.sub('\n', ' ', pair['_2'].strip()).strip()
+            str3 = re.sub('\n', ' ', pair['_1'])
+            if len(str3) > 0:
+                flag_end = 0
+                flag_start = 0
+                if str3[-1] == ' ':
+                    flag_end = 1
+                if str3[0] == ' ':
+                    flag_start = 1
+                str3 = ' '.join([ele for ele in str3.split() if len(ele.strip()) > 0])
+                if flag_end:
+                    str3 += ' '
+                if flag_start:
+                    str3 = ' ' + str3
+            # pair_file_y.write(str1.encode('utf-8') + '\n')
+            # pair_file_x.write(str2.encode('utf-8') + '\n')
             pair_file_z.write(str3.encode('utf-8') + '\n')
-            cur_info = cur_dict['id1'][:12] + '\t' + '\t'.join(map(str, [cur_dict[ele] for ele in keys]))
-            info_file.write(cur_info + '\n')
-    info_file.close()
-    pair_file_x.close()
-    pair_file_y.close()
+            # cur_info = cur_dict['id1'][:12] + '\t' + '\t'.join(map(str, [cur_dict[ele] for ele in keys]))
+            # info_file.write(cur_info + '\n')
+    # info_file.close()
+    # pair_file_x.close()
+    # pair_file_y.close()
     pair_file_z.close()
 
 
@@ -115,9 +127,12 @@ def load_pairs_eng(chunk_size):
                     cur_len = min(int(np.floor(random.random() * 10)) + 40, len_o - id_char)
                     begin = id_char
                     end = begin + cur_len
-                    cur_ocr = re.sub('@|#', '', ocr[begin:end]).strip()
-                    cur_gs = re.sub('@|#', '', gs[begin:end]).strip()
-                    cur_gs_orig = re.sub('@|#', '', gs[begin:end])
+                    # cur_ocr = ocr[begin:end].strip()
+                    # cur_gs = gs[begin:end].strip()
+                    # cur_gs_orig =  gs[begin:end]
+                    cur_ocr = re.sub('@', '', ocr[begin:end]).strip()
+                    cur_gs = re.sub('@', '', gs[begin:end]).strip()
+                    cur_gs_orig = re.sub('@', '', gs[begin:end])
                     f_x.write(cur_ocr.encode('utf-8') + '\n')
                     f_y.write(cur_gs.encode('utf-8') + '\n')
                     f_z.write(cur_gs_orig.encode('utf-8') + '\n')
@@ -216,8 +231,10 @@ def write_file_train_test(split_id):
             for cur_id in data_id:
                 if post_fix == 'x':
                     f_.write(x_list[cur_id] + '\n')
-                else:
+                elif post_fix == 'y':
                     f_.write(y_list[cur_id] + '\n')
+                elif post_fix == 'z':
+                    f_.write(z_list[cur_id] + '\n')
     dict_id = load_obj(join(folder_train, 'split_' + str(split_id)))
     test_date = dict_id['test']
     pairs_info = load_pair_info()
@@ -233,8 +250,11 @@ def write_file_train_test(split_id):
     num_pair = len(pairs_info)
     test_id = OrderedDict()
     for i in range(num_pair):
-        if 'UNCLEAR' in y_list[i]:
+        if '#' in y_list[i]:
             continue
+        if cat_name != 'richmond':
+            if '#' in y_list[i]:
+                continue
         cur_date = pairs_info[i]
         if len(y_list[i]) > 0:
             if cur_date in test_date:
@@ -261,8 +281,10 @@ def write_file_train_dev(error_ratio, train_id, split_id):
             for cur_id in data_id:
                 if post_fix == 'x':
                     f_.write(x_list[cur_id] + '\n')
-                else:
+                elif post_fix == 'y':
                     f_.write(y_list[cur_id] + '\n')
+                elif post_fix == 'z':
+                    f_.write(z_list[cur_id] + '\n')
     dict_id = load_obj(join(folder_train, 'split_' + str(split_id)))
     train_date = dict_id['train']
     dev_date = dict_id['test']
@@ -281,8 +303,11 @@ def write_file_train_dev(error_ratio, train_id, split_id):
     train_id = OrderedDict()
     dev_id = OrderedDict()
     for i in range(num_pair):
-        if 'UNCLEAR' in y_list[i]:
+        if '#' in y_list[i]:
             continue
+        if cat_name != 'richmond':
+            if '#' in y_list[i]:
+                continue
         cur_date = pairs_info[i]
         if len(y_list[i]) > 0:
             if cur_date in train_date:
@@ -303,9 +328,37 @@ def write_file_train_dev(error_ratio, train_id, split_id):
         f_.write('%d\n' % cur_id)
     f_.close()
     f_ = open(join(folder_train, 'dev.id'), 'w')
-    for cur_id in train_id:
+    for cur_id in dev_id:
         f_.write('%d\n' % cur_id)
     f_.close()
+
+
+def remove_nonascii(text):
+  return re.sub(r'[^\x00-\x7F]', '', text)
+
+
+def write_file_train_all(error_ratio, train_id, split_id):
+    folder_train = join(folder_data, str(train_id), str(split_id))
+    folder_out = join(folder_train, str(error_ratio))
+    if not exists(folder_out):
+        os.makedirs(folder_out)
+    dict_id = load_obj(join(folder_train, 'split_' + str(split_id)))
+    train_date = dict_id['train']
+    file_list = os.listdir(join('/scratch/dong.r/Dataset/unprocessed/richmond', 'richmond-dispatch-correct'))
+    f_ = open(join(folder_out, 'train.text'), 'w')
+    num_train = 0
+    for fn in file_list:
+        if not fn.startswith('.'):
+            cur_date = fn[:-2]
+            if cur_date in train_date:
+                num_train += 1
+                for line in file(join('/scratch/dong.r/Dataset/unprocessed/richmond', 'richmond-dispatch-correct', fn)):
+                    if len(line.strip()) > 0 and 'Column: ' not in line:
+                        cur_str =  remove_nonascii(line[:-1].replace('###UNCLEAR### ', ''))
+                        cur_str = ' '.join([ele for ele in cur_str.split() if len(ele.strip()) > 0])
+                        f_.write(cur_str + '\n')
+    f_.close()
+    print num_train
 
 
 def write_file_train_test_lm(split_id):
@@ -334,10 +387,27 @@ def write_file_train_test_lm(split_id):
                 cur_e = cur_group[cur_b][0]
                 if cur_e in cur_group:
                     print len(cur_group[cur_b]) - 1, len(cur_group[cur_e]) - 1
-                    dict_group2line[date][cur_b] += dict_group2line[date][cur_e]
+                    dict_group2line[date][cur_b] += dict_group2line[date][cur_e][1:]
                     dict_group2line[date][cur_b][0] = dict_group2line[date][cur_e][0]
                     dict_group2line[date][cur_e] = []
-    save_obj(join(folder_train, 'test.group'), dict_group2line)
+    # save_obj(join(folder_train, 'test.group'), dict_group2line)
+    dict_line2groupid = {}
+    dict_group2id = {}
+    gid = 0
+    for date in dict_group2line:
+        cur_group = dict_group2line[date]
+        for cur_b in cur_group:
+            if len(cur_group[cur_b]) > 0:
+                cur_e = cur_group[cur_b][0]
+                if (date, cur_b, cur_e) not in dict_group2id:
+                    dict_group2id[(date, cur_b, cur_e)] = gid
+                    gid += 1
+                for line_id in dict_group2line[date][cur_b][1:]:
+                    dict_line2groupid[line_id] = dict_group2id[(date, cur_b, cur_e)]
+    save_obj(join(folder_train, 'test.group'), dict_line2groupid)
+    save_obj(join(folder_train, 'test.group2id'), dict_group2id)
+
+
 
 
 def write_file_train_dev_lm(error_ratio, train_id, split_id):
@@ -367,10 +437,25 @@ def write_file_train_dev_lm(error_ratio, train_id, split_id):
             if len(cur_group[cur_b]) > 0:
                 cur_e = cur_group[cur_b][0]
                 if cur_e in cur_group:
-                    dict_group2line[date][cur_b] += dict_group2line[date][cur_e]
+                    dict_group2line[date][cur_b] += dict_group2line[date][cur_e][1:]
                     dict_group2line[date][cur_b][0] = dict_group2line[date][cur_e][0]
                     dict_group2line[date][cur_e] = []
-    save_obj(join(folder_train, 'dev.group'), dict_group2line)
+    # save_obj(join(folder_train, 'dev.group'), dict_group2line)
+    dict_line2groupid = {}
+    dict_group2id = {}
+    gid = 0
+    for date in dict_group2line:
+        cur_group = dict_group2line[date]
+        for cur_b in cur_group:
+            if len(cur_group[cur_b]) > 0:
+                cur_e = cur_group[cur_b][0]
+                if (date, cur_b, cur_e) not in dict_group2id:
+                    dict_group2id[(date, cur_b, cur_e)] = gid
+                    gid += 1
+                for line_id in dict_group2line[date][cur_b][1:]:
+                    dict_line2groupid[line_id] = dict_group2id[(date, cur_b, cur_e)]
+    save_obj(join(folder_train, 'test.group'), dict_line2groupid)
+    save_obj(join(folder_train, 'test.group2id'), dict_group2id)
 
 
 cat_name = dict_cat2name[sys.argv[1]]
@@ -410,6 +495,11 @@ elif sys.argv[2] == 'group':
         sid = int(sys.argv[5])
         ratio = int(sys.argv[6])
         write_file_train_dev_lm(ratio, tid, sid)
+elif sys.argv[2] == 'lm':
+    tid = int(sys.argv[3])
+    sid = int(sys.argv[4])
+    ratio = int(sys.argv[5])
+    write_file_train_all(ratio,tid, sid)
 
 
 
