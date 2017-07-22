@@ -23,7 +23,6 @@ def initialize():
     file_voc = '/scratch/dong.r/Dataset/OCR/voc/ascii.syms'
     lm = fst.Fst.read('/scratch/dong.r/Dataset/OCR/lm/char/richmond/train.mod')
     tbl = fst.SymbolTable.read_text(file_voc)
-    lm = fst.Fst.read('/scratch/dong.r/Dataset/OCR/lm/char/richmond/train.mod')
     concat_f=fst.Fst.read('/scratch/dong.r/Dataset/OCR/lm/concat.fst')
     get_dict()
 
@@ -49,24 +48,30 @@ def sentence_fst(sent, pb):
     f = fst.Fst()
     s = f.add_state()
     f.set_start(s)
-    for char in sent:
+    if len(sent) == 0:
         n = f.add_state()
-        if char != ' ':
-            cur_id = dict_char2id[char]
-        else:
-            cur_id = dict_char2id['<space>']
-        if s == 0:
-            f.add_arc(s, fst.Arc(cur_id, cur_id, -pb, n))
-        else:
-            f.add_arc(s, fst.Arc(cur_id, cur_id, 0.0, n))
-        s = n
-    f.set_final(n, 0.0)
+        cur_id = dict_char2id['<epsilon>']
+        f.add_arc(s, fst.Arc(cur_id, cur_id, -pb, n))
+        f.set_final(n, 0.0)
+    else:
+        for char in sent:
+            n = f.add_state()
+            if char != ' ':
+                cur_id = dict_char2id[char]
+            else:
+                cur_id = dict_char2id['<space>']
+            if s == 0:
+                f.add_arc(s, fst.Arc(cur_id, cur_id, -pb, n))
+            else:
+                f.add_arc(s, fst.Arc(cur_id, cur_id, 0.0, n))
+            s = n
+        f.set_final(n, 0.0)
     set_symbol(f)
-    # f.write()
     return f
 
+
 def merge_fst_two(f1, f2):
-    return fst.minimize(fst.determinize(f1.union(f2).rmepsilon()))
+    return fst.determinize(f1.union(f2).rmepsilon()).minimize()
 
 
 def concat_fst_two(f1, f2):
@@ -91,11 +96,13 @@ def thread_concat_fst(paras):
 
 def thread_list_concat_fst(paras):
     list_file_name= paras
-    final = read_fst(list_file_name[0])
+    final = fst.Fst.read(list_file_name[0])
     for fn in list_file_name[1:]:
-        f = read_fst(fn)
+        f = fst.Fst.read(fn)
         final = final.concat(concat_f)
         final = final.concat(f)
+    for fn in list_file_name:
+        subprocess.call(['rm', fn])
     return final
     # file_name = '.'.join(list_file_name[0].split('.')[:-1])
     # final.write(file_name)
@@ -103,11 +110,13 @@ def thread_list_concat_fst(paras):
 
 def thread_list_combine_fst(paras):
     list_file_name= paras
-    final = read_fst(list_file_name[0])
+    final = fst.Fst.read(list_file_name[0])
     for fn in list_file_name[1:]:
-        cur_fst = read_fst(fn)
-        final = fst.determinize(cur_fst.union(final).rmepsilon())
-    final = final.minimize()
+        cur_fst = fst.Fst.read(fn)
+        final = fst.determinize(final.union(cur_fst).rmepsilon())
+    for fn in list_file_name:
+        subprocess.call(['rm', fn])
+    final.minimize()
     file_name = '.'.join(list_file_name[0].split('.')[:-1])
     final.write(file_name)
 
@@ -115,8 +124,8 @@ def thread_list_combine_fst(paras):
 def thread_sentence_fst(paras):
     thread_no, sent, pb, file_name = paras
     f = sentence_fst(sent, pb)
-    f.write(file_name+'.'+thread_no)
-    print thread_no
+    f.write(file_name)
+    # print thread_no
 
 
 def combine_fst(list_fst):
@@ -208,14 +217,15 @@ def get_fst_for_group_sent(group, group_prob, w):
 
 
 def get_fst_for_group_paral(pool, group, group_prob, pro_id, beam_size, file_no, folder_data, w):
-    start_line = pro_id
+    start_line = pro_id[0]
     len_group=len(pro_id)
     len_sent = len(group)
     list_fst_file = [pjoin(folder_data, 'fst.tmp.%d.%d.%d' % (file_no, i, j))
                      for i in range(start_line, start_line + len_group)
                      for j in range(beam_size)]
     list_index = np.arange(len_sent, dtype=int).tolist()
-    pool.map(thread_sentence_fst, thread_sentence_fst, zip(list_index, group, group_prob, list_fst_file))
+    group_prob = [ele * w for ele in group_prob]
+    pool.map(thread_sentence_fst, zip(list_index, group, group_prob, list_fst_file))
     pool.map(thread_list_combine_fst, [list_fst_file[k * beam_size: (k + 1) * beam_size] for k in range(len_group)])
     list_concat_file = [pjoin(folder_data, 'fst.tmp.%d.%d' % (file_no, i))
                      for i in range(start_line, start_line + len_group)]
@@ -223,7 +233,6 @@ def get_fst_for_group_paral(pool, group, group_prob, pro_id, beam_size, file_no,
     set_symbol(final)
     final = fst.shortestpath(fst.intersect(final, lm)).rmepsilon()
     string = print_path(final)
-    subprocess.call(['rm', pjoin(folder_data, 'fst.tmp.*')])
     # f = read_fst(folder_data + '/fst.tmp.0.%d.score' % start_line)
     return string
 

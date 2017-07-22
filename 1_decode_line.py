@@ -25,7 +25,6 @@ from PyLib import operate_file as opf
 from levenshtein import align_all, align
 from collections import OrderedDict
 from multiprocessing import Pool
-# from pathos.multiprocessing import ProcessingPool as Pool
 from process_lm import *
 import sys
 
@@ -81,7 +80,7 @@ def decode():
         else:
             flag_process = 1
         if flag_process:
-            cur_str = get_fst_for_group_paral(pool, pro_group, pro_prob, pro_id, beam_size, start, data_dir,  weight)
+            cur_str = get_fst_for_group_paral(pool, pro_group, pro_prob, pro_id, beam_size, start, out_dir, weight)
             # cur_str = get_fst_for_group_sent(pro_group, pro_prob, 1000)
             group_char_dis = 0
             group_best_dis = 0
