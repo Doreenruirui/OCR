@@ -45,6 +45,7 @@ def get_voc():
 
 def sentence_fst(sent, pb):
     global dict_char2id
+    sent = sent.replace('_', '-')
     f = fst.Fst()
     s = f.add_state()
     f.set_start(s)
@@ -124,7 +125,8 @@ def thread_list_combine_fst(paras):
 def thread_sentence_fst(paras):
     thread_no, sent, pb, file_name = paras
     f = sentence_fst(sent, pb)
-    f.write(file_name)
+    # f.write(file_name)
+    return f
     # print thread_no
 
 
@@ -221,20 +223,31 @@ def get_fst_for_group_paral(pool, group, group_prob, pro_id, beam_size, file_no,
     len_group=len(pro_id)
     len_sent = len(group)
     list_fst_file = [pjoin(folder_data, 'fst.tmp.%d.%d.%d' % (file_no, i, j))
-                     for i in range(start_line, start_line + len_group)
-                     for j in range(beam_size)]
+                    for i in range(start_line, start_line + len_group)
+                    for j in range(beam_size)]
     list_index = np.arange(len_sent, dtype=int).tolist()
-    group_prob = [ele * w for ele in group_prob]
-    pool.map(thread_sentence_fst, zip(list_index, group, group_prob, list_fst_file))
-    pool.map(thread_list_combine_fst, [list_fst_file[k * beam_size: (k + 1) * beam_size] for k in range(len_group)])
-    list_concat_file = [pjoin(folder_data, 'fst.tmp.%d.%d' % (file_no, i))
-                     for i in range(start_line, start_line + len_group)]
-    final = thread_list_concat_fst(list_concat_file)
-    set_symbol(final)
-    final = fst.shortestpath(fst.intersect(final, lm)).rmepsilon()
-    string = print_path(final)
+    group_prob = [np.log10(np.exp(ele)) + np.log10(w) for ele in group_prob]
+    group_prob = [np.log10(np.exp(ele)) * w for ele in group_prob]
+    # list_fst = []
+    # for cur_str, cur_pb in zip(group, group_prob):
+    #     list_fst.append(sentence_fst(cur_str, cur_pb))
+    # list_combine = []
+    # for i in range(len_group):
+    #     start = i * beam_size
+    #     end = (i + 1) * beam_size
+    #     list_combine.append(combine_fst(list_fst[start:end]))
+    # final = concat_fst(list_combine)
+    results = pool.map(thread_sentence_fst, zip(list_index, group, group_prob, list_fst_file))
+    print results
+    #pool.map(thread_list_combine_fst, [list_fst_file[k * beam_size: (k + 1) * beam_size] for k in range(len_group)])
+    #list_concat_file = [pjoin(folder_data, 'fst.tmp.%d.%d' % (file_no, i))
+    #                 for i in range(start_line, start_line + len_group)]
+    #final = thread_list_concat_fst(list_combine)
+    # set_symbol(final)
+    # final = fst.shortestpath(fst.intersect(final, lm)).rmepsilon()
+    # string = print_path(final)
     # f = read_fst(folder_data + '/fst.tmp.0.%d.score' % start_line)
-    return string
+    # return string
 
 
 
