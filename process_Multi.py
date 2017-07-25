@@ -110,6 +110,8 @@ def merget_file():
     out_y_info = open(out_fn + '.y.info', 'w')
     last_num_line = 0
     last_num_group = 0
+    total_num_y = 0
+    total_num_z = 0
     for fn in list_out_file:
         num_line = 0
         for line in file(fn + '.x'):
@@ -119,23 +121,37 @@ def merget_file():
             out_y.write(line)
         for line in file(fn + '.z'):
             out_z.write(line)
-        num_group = 0
-        for line in file(fn + '.x.info'):
-            line = line.split('\t')
-            cur_group = int(line[0])
-            line[0] = str(int(line[0]) + last_num_group)
-            line[1] = str(int(line[1]) + last_num_line)
-            out_x_info.write('\t'.join(line))
-            if cur_group > num_group:
-                num_group = cur_group
+        dict_x2liney = {}
+        dict_x2linez = {}
         for line in file(fn + '.y.info'):
             line = line.split('\t')
             line[0] = str(int(line[0]) + last_num_line)
+            dict_x2liney[line[0]] = total_num_y
+            total_num_y += 1
             out_y_info.write('\t'.join(line))
         for line in file(fn + '.z.info'):
             line = line.split('\t')
             line[0] = str(int(line[0]) + last_num_line)
+            dict_x2linez[line[0]] = total_num_z
+            total_num_z += 1
             out_z_info.write('\t'.join(line))
+        num_group = 0
+        for line in file(fn + '.x.info'):
+            line = line.strip('\r\n').split('\t')
+            cur_group = int(line[0])
+            line[0] = str(int(line[0]) + last_num_group)
+            line[1] = str(int(line[1]) + last_num_line)
+            if line[1] in dict_x2liney:
+                line.append(str(dict_x2liney[line[1]]))
+            else:
+                line.append('0')
+            if line[1] in dict_x2linez:
+                line.append(str(dict_x2linez[line[1]]))
+            else:
+                line.append('0')
+            out_x_info.write('\t'.join(line))
+            if cur_group > num_group:
+                num_group = cur_group
         last_num_group += num_group
         last_num_line += num_line
     out_x.close()
@@ -159,5 +175,5 @@ def process_data():
 
 
 
-process_data()
+# process_data()
 merget_file()
