@@ -159,10 +159,10 @@ def align_one2many(P, truth, cands, flag_char=1):
     min_dis = float('inf')
     min_str = ''
     for i in range(ncand):
-        cur_thread, cur_dis, cur_str = results[i]
+        cur_thread, cur_dis = results[i]
         if cur_dis < min_dis:
             min_dis = cur_dis
-            min_str = cur_str
+            min_str = cands[cur_thread]
     return min_dis, min_str
 
 
@@ -189,7 +189,7 @@ def align_beam(P, truth, cands, flag_char=1):
     list_flag = [flag_char for _ in range(ndata)]
     paras = zip(list_index, truth, cands, list_flag)
     results = P.map(align_one2many_thread, paras)
-    for i in range(len(truth)):
+    for i in range(ndata):
         cur_thread, cur_dis, cur_str = results[i]
         list_dis[cur_thread] = cur_dis
         list_str[cur_thread] = cur_str

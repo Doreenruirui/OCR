@@ -49,7 +49,7 @@ def evaluate_best(folder_name, out_folder, prefix='dev', beam_size=100, start=0,
     list_top = []
     for line in file(file_name):
         line_id += 1
-        cur_str=line.split('\t')[0].strip()
+        cur_str=line.split('\t')[0].strip().lower()
         if line_id % beam_size == 1:
             if len(list_beam) == beam_size:
                 list_dec.append(list_beam)
@@ -58,9 +58,9 @@ def evaluate_best(folder_name, out_folder, prefix='dev', beam_size=100, start=0,
         list_beam.append(cur_str)
     list_dec.append(list_beam)
     with open(pjoin(folder_data, prefix + '.x.txt'), 'r') as f_:
-        list_x = [ele.strip() for ele in f_.readlines()][start:end]
+        list_x = [ele.strip().lower() for ele in f_.readlines()][start:end]
     with open(pjoin(folder_data, prefix + '.y.txt'), 'r') as f_:
-        list_y = [ele.strip() for ele in f_.readlines()][start:end]
+        list_y = [ele.strip().lower() for ele in f_.readlines()][start:end]
     len_yc = [len(y) for y in list_y]
     len_yw = [len(y.split()) for y in list_y]
     print len(len_yc)
@@ -91,7 +91,7 @@ def evaluate_best(folder_name, out_folder, prefix='dev', beam_size=100, start=0,
             f_.write(cur_str + '\n')
 
 
-if False:
+if True:
     filename = sys.argv[1]
     error_rate_file(filename)
 else:

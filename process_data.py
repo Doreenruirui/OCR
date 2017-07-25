@@ -246,7 +246,7 @@ def write_file_train_test(split_id):
         y_list.append(line.strip())
     z_list = []
     for line in file(join(folder_data, 'pair_z')):
-        z_list.append(line.strip())
+        z_list.append(line[:-1])
     num_pair = len(pairs_info)
     test_id = OrderedDict()
     for i in range(num_pair):
@@ -262,8 +262,8 @@ def write_file_train_test(split_id):
     print len(test_id)
     print len(x_list)
     print len(y_list)
-    write_file('test', test_id, 'x')
-    write_file('test', test_id, 'y')
+    #write_file('test', test_id, 'x')
+    #write_file('test', test_id, 'y')
     write_file('test', test_id, 'z')
     f_ = open(join(folder_train, 'test.id'), 'w')
     for cur_id in test_id:
@@ -298,7 +298,7 @@ def write_file_train_dev(error_ratio, train_id, split_id):
         y_list.append(line.strip())
     z_list = []
     for line in file(join(folder_data, 'pair_z')):
-        z_list.append(line.strip())
+        z_list.append(line[:-1])
     num_pair = len(pairs_info)
     train_id = OrderedDict()
     dev_id = OrderedDict()

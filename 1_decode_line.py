@@ -115,7 +115,7 @@ def decode():
                     ocr_dis = align(cur_truth_strip, cur_ocr)
                     best_dis = align(cur_truth_strip, cur_best)
                     best_char_dis, best_char_str = align_one2many(pool, cur_truth_strip, outputs, flag_char=1)
-                    f_o1.write('%d\t%d\t%d\t%d\n' % (best_char_dis, best_dis, ocr_dis, len_y))
+                    f_o1.write('%d\t%d\t%d\t%d\n' % (best_char_dis, best_dis, ocr_dis, len_y))    
                     f_o2.write('%d\t%d\t\n' % (best_dis, len_y))
                     f_i.write('%d\t%d\n' % (pro_id[j], pro_id[j]))
             else:
@@ -143,7 +143,7 @@ def decode():
                     group_len += len_y
                     group_truth += cur_truth
                 dis = align(cur_str.strip(), group_truth.strip())
-                f_o1.write('%d\t%d\t%d\t%d\t%d\n' % (group_char_dis, group_best_dis, group_ocr_dis, group_len, len(group_truth.strip())))
+                f_o1.write('%d\t%d\t%d\t%d\n' % (group_char_dis, group_best_dis, group_ocr_dis, group_len))
                 f_o2.write('%d\t%d\t\n' % (dis, len(group_truth.strip())))
             f_i.write('%d\t%d\n' % (pro_id[0], pro_id[-1]))
             pro_group = []

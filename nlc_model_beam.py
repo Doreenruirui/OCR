@@ -36,6 +36,7 @@ from tensorflow.python.ops.math_ops import tanh
 
 import nlc_data
 
+
 def get_optimizer(opt):
     if opt == "adam":
         optfn = tf.train.AdamOptimizer
@@ -125,7 +126,6 @@ class NLCModel(object):
             self.decoder_inputs = embedding_ops.embedding_lookup(self.L_dec, self.target_tokens)
 
 
-
     def setup_encoder(self):
         self.encoder_cell = rnn_cell.GRUCell(self.size)
         with vs.variable_scope("PryamidEncoder"):
@@ -180,30 +180,26 @@ class NLCModel(object):
 
     def setup_beam(self):
         time_0 = tf.constant(0)
-        beam_seqs_0 = tf.constant([[nlc_data.SOS_ID]])
-        beam_probs_0 = tf.constant([0.])
+        batch_size = tf.shape(self.source_tokens)[0]
+        beam_seqs_0 = tf.ones(shape=(batch_size, self.beam_size, 1), dtype=tf.int32) * nlc_data.SOS_ID
+        beam_probs_0 = tf.zeros(shape=(batch_size, self.beam_size), dtype=tf.float32)
         cand_seqs_prob_0 = tf.constant([[0.]])
         beam_seqs_prob_0 = tf.constant([[0.]])
-        cand_seqs_0 = tf.constant([[nlc_data.EOS_ID]])
-        cand_probs_0 = tf.constant([-3e38])
-
-        state_0 = tf.zeros([1, self.size])
+        cand_seqs_0 = tf.ones(shape=(batch_size, self.beam_size, 1), dtype=tf.int32) * nlc_data.EOS_ID
+        cand_probs_0 = tf.zeros(shape=(batch_size, self.beam_size), dtype=tf.float32) * -3e38
+        state_0 = tf.zeros([self.batch_size * self.beam_size, self.size])
         states_0 = [state_0] * self.num_layers
 
-        # bases_0 = tf.ones((1, self.beam_size), dtype=tf.int32)
-        # mods_0 = tf.ones((1, self.beam_size), dtype=tf.int32)
-
-        #total_probs_0 = tf.ones((1, self.beam_size)) * -3e38
-        # cur_probs_0 = tf.ones((1, self.beam_size)) * -3e38
-        # cur_eos_probs_0 = tf.ones((1, self.beam_size)) * -3e38
-        #eos_probs_0 = tf.ones((1, self.beam_size))  * -3e38
-
         def beam_cond(cand_probs, cand_seqs, time, beam_probs, beam_seqs, cand_seq_prob, beam_seq_prob, *states):
-            return tf.logical_and(tf.reduce_max(beam_probs) >= tf.reduce_min(cand_probs), time < tf.reshape(self.len_input, ()) + 10)
+            return tf.logical_and(tf.reduce_sum(tf.cast(tf.greater(cand_probs,
+                                                                   beam_probs)))
+                                  < batch_size * self.beam_size,
+                                  time < tf.reshape(self.len_input, ()) + 10)
 
         def beam_step(cand_probs, cand_seqs, time, beam_probs, beam_seqs, cand_seq_prob, beam_seq_prob, *states):
             batch_size = tf.shape(beam_probs)[0]
-            inputs = tf.reshape(tf.slice(beam_seqs, [0, time], [batch_size, 1]), [batch_size])
+            inputs = tf.reshape(tf.slice(beam_seqs, [0, 0, time], [batch_size, self.beam_size, 1]),
+                                [batch_size * self.beam_size])
             decoder_input = embedding_ops.embedding_lookup(self.L_dec, inputs)
             decoder_output, state_output = self.decoder_graph(decoder_input, states)
 
@@ -221,7 +217,11 @@ class NLCModel(object):
             flat_log_probs = tf.reshape(logprobs2d, [-1])
 
             beam_k = tf.minimum(tf.size(flat_total_probs), self.beam_size)
-            next_beam_probs, top_indices = tf.nn.top_k(flat_total_probs, k=beam_k)
+            top_indices = tf.cast(tf.reshape(tf.multinomial(tf.reshape(flat_log_probs, [1, -1]),
+                                                            beam_k),
+                                             [-1]),
+                                  tf.int32)
+            next_beam_probs = tf.gather(flat_log_probs, top_indices)
 
             next_bases = tf.floordiv(top_indices, self.vocab_size)
             next_mods = tf.mod(top_indices, self.vocab_size)
@@ -266,22 +266,27 @@ class NLCModel(object):
             new_cand_probs = tf.concat(0, [cand_probs, tf.reshape(EOS_probs, [-1])])
 
             cand_k = tf.minimum(tf.size(new_cand_probs), self.beam_size)
-            next_cand_probs, next_cand_indices = tf.nn.top_k(new_cand_probs, k=cand_k)
+            next_cand_indices = tf.cast(tf.reshape(tf.multinomial(tf.reshape(new_cand_probs,
+                                                                     [1, -1]),
+                                                          cand_k),
+                                           [-1]), tf.int32)
+            next_cand_probs = tf.gather(new_cand_probs, next_cand_indices)
             next_cand_seqs = tf.gather(new_cand_seqs, next_cand_indices)
 
-            new_beam_seq_prob = tf.reshape(tf.gather(beam_seq_prob, next_bases), [beam_k, -1])
-            cur_seq_prob = tf.reshape(tf.gather(flat_log_probs, top_indices), [beam_k, -1])
-            next_beam_seq_prob = tf.concat(1, [new_beam_seq_prob, cur_seq_prob])
-            cur_eos = tf.slice(logprobs2d, [0, nlc_data.EOS_ID], [batch_size, 1])
-            cand_seq_prob_pad = tf.pad(cand_seq_prob, [[0,0],[0,1]])
-            beam_seq_prob_pad = tf.concat(1, [tf.reshape(beam_seq_prob,
-                                                         [batch_size, -1]),
-                                              cur_eos])
-            new_cand_seq_prob = tf.concat(0, [cand_seq_prob_pad, beam_seq_prob_pad])
-            next_cand_seq_prob = tf.gather(new_cand_seq_prob, next_cand_indices)
+
+            # new_beam_seq_prob = tf.reshape(tf.gather(beam_seq_prob, next_bases), [beam_k, -1])
+            # cur_seq_prob = tf.reshape(tf.gather(flat_log_probs, top_indices), [beam_k, -1])
+            # next_beam_seq_prob = tf.concat(1, [new_beam_seq_prob, cur_seq_prob])
+            # cur_eos = tf.slice(logprobs2d, [0, nlc_data.EOS_ID], [batch_size, 1])
+            # cand_seq_prob_pad = tf.pad(cand_seq_prob, [[0, 0], [0, 1]])
+            # beam_seq_prob_pad = tf.concat(1, [tf.reshape(beam_seq_prob,
+            #                                              [batch_size, -1]),
+            #                                   cur_eos])
+            # new_cand_seq_prob = tf.concat(0, [cand_seq_prob_pad, beam_seq_prob_pad])
+            # next_cand_seq_prob = tf.gather(new_cand_seq_prob, next_cand_indices)
 
 
-            return [next_cand_probs, next_cand_seqs, time + 1, next_beam_probs, next_beam_seqs, next_cand_seq_prob, next_beam_seq_prob] + next_states
+            return [next_cand_probs, next_cand_seqs, time + 1, next_beam_probs, next_beam_seqs, cand_seq_prob, beam_seq_prob] + next_states
 
         var_shape = []
         # var_shape.append((total_probs_0, tf.TensorShape([None, None])))
