@@ -28,7 +28,8 @@ from multiprocessing import Pool
 from process_lm import *
 import sys
 from os.path import exists
-        
+
+
 out_dir = ''
 data_dir= ''
 lm_dir=''
@@ -40,18 +41,19 @@ beam_size=100
 weight1=100
 weight2=10
 
+
 def decode():
     # Prepare NLC data.
     global out_dir, data_dir, lm_dir, dev, start, end, nthread, beam_size, weight1, weight2
-    new_out_dir = pjoin(out_dir, str(weight1) + '_' + str(weight2))
+    lm_name=lm_dir.split('/')[-1]
+    new_out_dir = pjoin(out_dir, str(weight1) + '_' + str(weight2) + '_' + lm_name)
     if not exists(new_out_dir):
         os.makedirs(new_out_dir)
     with open(pjoin(out_dir, dev + '.o.txt.' + str(start) + '_' + str(end)), 'r') as f_:
         lines = [ele[:-1].split('\t') for ele in f_.readlines()]
+    all_dis = np.loadtxt(pjoin(out_dir, dev + '.ec.txt.' + str(start) + '_' + str(end)), dtype=int)
     with open(pjoin(data_dir, dev + '.z.txt'), 'r') as f_:
         truths = [ele.strip('\n') for ele in f_.readlines()]
-    with open(pjoin(data_dir, dev + '.x.txt'), 'r') as f_:
-        list_ocr = [ele.strip('\n') for ele in f_.readlines()]
     line_ids = np.loadtxt(pjoin(data_dir, dev + '.id'), dtype=int)
     if len(line_ids) != len(truths):
         raise 'ID number is not consistent with input file!'
@@ -65,36 +67,29 @@ def decode():
     pro_group = []
     pro_truth = []
     pro_prob = []
-    pro_ocr = []
     pro_id=[]
     initialize(lm_dir)
     num_empty=0
     pool = Pool(processes=nthread, initializer=get_dict())
-    f_o1 = open(pjoin(out_dir, dev + '.e1.txt.' + str(start) + '_' + str(end) + '.' + str(weight1) + '_' + str(weight2)), 'w')
-    f_o2 = open(pjoin(out_dir, dev + '.e2.txt.' + str(start) + '_' + str(end) + '.' + str(weight1) + '_' + str(weight2)), 'w')
-    f_i = open(pjoin(out_dir, dev + '.i.txt.' + str(start) + '_' + str(end) + '.' + str(weight1) + '_' + str(weight2)), 'w')
+    f_o2 = open(pjoin(new_out_dir, dev + '.e2.txt.' + str(start) + '_' + str(end)), 'w')
     for i in range(end - start): 
-        cur_pro_out = [lines[k][0] for k in range(i * beam_size, (i + 1) * beam_size)]
+        cur_pro_out = [lines[k][0].lower() for k in range(i * beam_size, (i + 1) * beam_size)]
         cur_pro_prob = []
         for k in range(i * beam_size, (i + 1) * beam_size):
             if len(lines[k]) == 1:
                 cur_pro_prob.append(0.0)
             else:
                 cur_pro_prob.append(float(lines[k][1]))
-        #cur_prob = [float(lines[k][1]) for k in range(i * beam_size, (i + 1) * beam_size)]
-
-        cur_pro_ocr = list_ocr[i + start] 
-        cur_pro_truth = truths[i + start]
+        cur_pro_truth = truths[i + start].lower()
         cur_id = line_ids[i]
         cur_group_id = dict_id2group[cur_id]
         flag_process = 0
         if cur_group_id == process_group_id:
             pro_group.append(cur_pro_out)
             pro_truth.append(cur_pro_truth)
-            pro_ocr.append(cur_pro_ocr)
             pro_prob.append(cur_pro_prob)
             pro_id.append(i)
-            if len(pro_id) == max_size:
+            if len(pro_id) == max_size or i == end - start - 1:
                 flag_process = 1
         else:
             flag_process = 1
@@ -103,64 +98,21 @@ def decode():
             print('Get String ...')
             cur_str = get_fst_for_group_paral(pool, pro_group, pro_prob, pro_id, beam_size, start, new_out_dir, weight1, weight2)
             print(pro_id[0], pro_id[-1])
-            if len(cur_str.strip()) == 0:
-                num_empty += 1
-                for j in range(len(pro_id)):
-                    cur_truth = pro_truth[j]
-                    outputs = pro_group[j]
-                    cur_truth_strip = cur_truth.strip()
-                    cur_ocr = pro_ocr[j]
-                    len_y = len(cur_truth_strip)
-                    cur_best = outputs[0]
-                    ocr_dis = align(cur_truth_strip, cur_ocr)
-                    best_dis = align(cur_truth_strip, cur_best)
-                    best_char_dis, best_char_str = align_one2many(pool, cur_truth_strip, outputs, flag_char=1)
-                    f_o1.write('%d\t%d\t%d\t%d\n' % (best_char_dis, best_dis, ocr_dis, len_y))
-                    f_o2.write('%d\t%d\t\n' % (best_dis, len_y))
-                    f_i.write('%d\t%d\n' % (pro_id[j], pro_id[j]))
-            else:
-            # cur_str = get_fst_for_group_sent(pro_group, pro_prob, 1000)
-                group_char_dis = 0
-                group_best_dis = 0
-                group_len = 0
-                group_truth = ''
-                group_ocr_dis = 0
-                for j in range(len(pro_id)):
-                    cur_truth = pro_truth[j]
-                    outputs = pro_group[j]
-                    cur_truth_strip = cur_truth.strip()
-                    len_y = len(cur_truth_strip)
-                    cur_best = outputs[0]
-                    cur_ocr = pro_ocr[j]
-                    ocr_dis = align(cur_truth_strip, cur_ocr)
-                    best_dis = align(cur_truth_strip, cur_best)
-                    best_char_dis, best_char_str = align_one2many(pool, cur_truth_strip,
-                                                         outputs,
-                                                         flag_char=1)
-                    group_ocr_dis += ocr_dis
-                    group_char_dis += best_char_dis
-                    group_best_dis += best_dis
-                    group_len += len_y
-                    group_truth += cur_truth
-                dis = align(cur_str.strip(), group_truth.strip())
-                f_o1.write('%d\t%d\t%d\t%d\t%d\n' % (group_char_dis, group_best_dis, group_ocr_dis, group_len, len(group_truth.strip())))
-                f_o2.write('%d\t%d\t\n' % (dis, len(group_truth.strip())))
-            f_i.write('%d\t%d\n' % (pro_id[0], pro_id[-1]))
+            cur_truth = ''.join(pro_truth).strip()
+            print('Align String ...')
+            dis = align(cur_str.strip(), cur_truth)
+            f_o2.write('%d\t%d\t\n' % (dis, len(cur_truth)))
             pro_group = []
             pro_truth = []
             pro_id = []
             pro_prob = []
-            pro_ocr = []
         if cur_group_id != process_group_id:
             pro_group.append( cur_pro_out)
             pro_truth.append(cur_pro_truth)
             pro_prob.append(cur_pro_prob)
             pro_id.append(i)
-            pro_ocr.append(cur_pro_ocr)
             process_group_id = cur_group_id
-    f_o1.close()
     f_o2.close()
-    f_i.close()
     print(num_empty)
 
 

@@ -35,7 +35,6 @@ import nlc_model
 import nlc_data
 #import nlc_data_no_filter as nlc_data
 from util import initialize_vocabulary, get_tokenizer
-from levenshtein import align_all_new, align
 from multiprocessing import Pool
 import kenlm
 import pdb
@@ -155,8 +154,10 @@ def decode():
             f_o.write('\n' * 100)
             continue
         output_sents, output_probs = fix_sent(model, sess, sent)
-        for sent in output_sents:
-            f_o.write(sent + '\n')
+        for i in range(len(output_sents)):
+            sent = output_sents[i]
+            prob = output_probs[i]
+            f_o.write(sent + '\t' + str(prob) + '\n')
         if line_id % 100 == 0:
             toc = time.time()
             print(toc - tic)

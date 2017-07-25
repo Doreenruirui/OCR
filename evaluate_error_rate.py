@@ -40,54 +40,66 @@ def evaluate_best(folder_name, out_folder, prefix='dev', beam_size=100, start=0,
     global folder_data
     folder_data = pjoin(folder_data, folder_name)
     if end == -1:
-        file_name = pjoin(folder_data, out_folder, prefix + 'o.txt')
+        file_name = pjoin(folder_data, out_folder, prefix + '.o.txt')
     else:
-        file_name = pjoin(folder_data, out_folder, prefix + 'o.txt.' + str(start) + '_' + str(end))
+        file_name = pjoin(folder_data, out_folder, prefix + '.o.txt.' + str(start) + '_' + str(end))
     line_id = 0
     list_dec = []
     list_beam = []
     list_top = []
     for line in file(file_name):
         line_id += 1
-        if line_id % beam_size == 1 and len(list_beam) == beam_size:
-            list_dec.append(list_beam)
-            list_beam = []
-            list_top.append(line.split('\t')[0])
-        list_beam.append(line.split('\t')[0])
+        cur_str=line.split('\t')[0].strip()
+        if line_id % beam_size == 1:
+            if len(list_beam) == beam_size:
+                list_dec.append(list_beam)
+                list_beam = []
+            list_top.append(cur_str)
+        list_beam.append(cur_str)
+    list_dec.append(list_beam)
     with open(pjoin(folder_data, prefix + '.x.txt'), 'r') as f_:
-        list_x = [ele.strip() for ele in f_.readlines()]
+        list_x = [ele.strip() for ele in f_.readlines()][start:end]
     with open(pjoin(folder_data, prefix + '.y.txt'), 'r') as f_:
-        list_y = [ele.strip() for ele in f_.readlines()]
+        list_y = [ele.strip() for ele in f_.readlines()][start:end]
     len_yc = [len(y) for y in list_y]
     len_yw = [len(y.split()) for y in list_y]
     print len(len_yc)
     nthread=100
     P = Pool(nthread)
-    dis_by, _ = align_beam(P, list_y, list_dec, 1)
+    dis_by, best_str = align_beam(P, list_y, list_dec, 1)
     dis_ty = align_pair(P, list_y,  list_top, 1)
     dis_xy = align_pair(P, list_y, list_x,  1)
-    dis_by_w, _ = align_beam(P, list_y, list_dec, 0)
+    dis_by_w, best_str_w = align_beam(P, list_y, list_dec, 0)
     dis_ty_w = align_pair(P, list_y, list_top, 0)
     dis_xy_w = align_pair(P, list_y, list_top, 0)
     dis_char = np.asarray(zip(dis_by, dis_ty, dis_xy, len_yc))
     dis_word = np.asarray(zip(dis_by_w, dis_ty_w, dis_xy_w, len_yw))
     if end == -1:
-        outfile_char = pjoin(folder_data, out_folder, prefix + 'ec.txt')
+        outfile_char = pjoin(folder_data, out_folder, prefix + '.ec.txt')
 
-        outfile_word  = pjoin(folder_data, out_folder, prefix + 'ew.txt')
+        outfile_word  = pjoin(folder_data, out_folder, prefix + '.ew.txt')
     else:
-        outfile_char = pjoin(folder_data, out_folder, prefix + 'ec.txt.' + str(start) + '_' + str(end))
-        outfile_word = pjoin(folder_data, out_folder, prefix + 'ew.txt.' + str(start) + '_' + str(end))
-    np.savetxt(outfile_char, dis_char)
-    np.savetxt(outfile_word, dis_word)
+        outfile_char = pjoin(folder_data, out_folder, prefix + '.ec.txt.' + str(start) + '_' + str(end))
+        outfile_word = pjoin(folder_data, out_folder, prefix + '.ew.txt.' + str(start) + '_' + str(end))
+    np.savetxt(outfile_char, dis_char, fmt='%d')
+    np.savetxt(outfile_word, dis_word, fmt='%d')
+    with open(pjoin(folder_data, out_folder, prefix + '.bc.txt.' + str(start) + '_' + str(end)), 'w') as f_:
+        for cur_str in best_str:
+            f_.write(cur_str + '\n')
+    with open(pjoin(folder_data, out_folder, prefix + '.bw.txt.' + str(start) + '_' + str(end)), 'w') as f_:
+        for cur_str in best_str_w:
+            f_.write(cur_str + '\n')
 
 
-
-cur_folder = sys.argv[1]
-cur_prefix = sys.argv[2]
-cur_out = sys.argv[3]
-beam = int(sys.argv[4])
-start_line = int(sys.argv[5])
-end_line = int(sys.argv[6])
-evaluate_best(cur_folder, cur_out, cur_prefix,  beam_size=beam, start=start_line, end=end_line)
+if False:
+    filename = sys.argv[1]
+    error_rate_file(filename)
+else:
+    cur_folder = sys.argv[1]
+    cur_prefix = sys.argv[2]
+    cur_out = sys.argv[3]
+    beam = int(sys.argv[4])
+    start_line = int(sys.argv[5])
+    end_line = int(sys.argv[6])
+    evaluate_best(cur_folder, cur_out, cur_prefix,  beam_size=beam, start=start_line, end=end_line)
 
