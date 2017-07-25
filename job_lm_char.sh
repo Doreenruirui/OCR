@@ -51,12 +51,13 @@ for i in $(seq 1 $nfile);
 do
     cur_file=$file_script$i
     j=$(($i-1))
-    k=$(($j*$2))
-    cur_cmd='./run_lm_char_line.sh '$1' '$i' '$k' '$2' '$nline
+    k=$(($j*$size))
+    cur_cmd='./run_lm_char_line.sh '$folder_data' '$i' '$k' '$size' '$nline
     $(rm_file $cur_file)
     $(writejob $cur_file $jobname $i $folder_script $machine)
+    echo 'source ~/.bashrc' >> $cur_file
     echo ''$cur_cmd >> $cur_file
-    $(sbatch $cur_file)
+    #$(sbatch $cur_file)
 done
 merge_file=$file_script'merge'
 $(rm_file $merge_file)
@@ -76,7 +77,7 @@ do
     done
 done
 echo 'mv '$folder_data'/train_symbols.cnt.1 '$folder_data'/train_symbols.cnt' >> $merge_file
-echo 'ngrammake '$folder_data'/train_symbols.cnt >'$folder_data'/train.mod' >> $merge_file
+echo 'ngrammake --backoff=true '$folder_data'/train_symbols.cnt >'$folder_data'/train.mod' >> $merge_file
 
 #para=$(echo $para | xargs)
 #para=($para)

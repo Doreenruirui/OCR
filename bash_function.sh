@@ -8,7 +8,8 @@ writejob(){ echo '#!/bin/bash' >> $1;
             echo '#SBATCH --partition='$5 >> $1;
             echo '#SBATCH -N 1' >> $1;
             echo '' >> $1;
-            echo 'work=/home/dong.r/nlc-master/' >> $1;
+            echo 'source /home/dong.r/.bashrc' >> $1;
+            echo 'work=/home/dong.r/OCR/' >> $1;
             echo 'cd $work' >> $1;
             }
 

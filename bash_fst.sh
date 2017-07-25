@@ -1,4 +1,4 @@
-source /home/dong.r/nlc-master/bash_function.sh
+source /home/dong.r/OCR/bash_function.sh
 
 write_fst(){
     local line=$1
@@ -74,9 +74,9 @@ get_fst_for_line(){
     #local a=$(sed -n ''$start','$end'p' $file_name)
 	#echo ${#a}
     #local task=('fstunion ' ' ' ' | fstrmepsilon - | fstdeterminize - | fstminimize -'):
-    #echo 'source /home/dong.r/nlc-master/bash_fst.sh'
+    #echo 'source /home/dong.r/OCR/bash_fst.sh'
     $(rm_file $file_bash)
-    echo 'source /home/dong.r/nlc-master/bash_fst.sh' >> $file_bash
+    echo 'source /home/dong.r/OCR/bash_fst.sh' >> $file_bash
     $(write_fst_batch $start $end $file_name $file_fst $lam $file_bash $file_sym)
     #echo write_fst_batch $start $end $file_name $file_fst $lam $file_bash $file_sym
     #echo merge_iter 100 "$task" $file_bash $file_fst
@@ -94,13 +94,13 @@ get_fst_for_group(){
     local file_no=$(echo -e "$file_name" | cut -d $'_' -f1 | cut -d $'.' -f4)
     echo $file_no
     file_name=$folder_data'/'$file_name
-    local file_bash='/home/dong.r/nlc-master/run_group.'$file_no'.'$start
+    local file_bash='/home/dong.r/OCR/run_group.'$file_no'.'$start
     echo $file_bash
     local file_lm='/scratch/dong.r/Dataset/OCR/lm/char/richmond/train.mod'
 	local file_sym='/scratch/dong.r/Dataset/OCR/voc/ascii.syms'
 	local file_fst=$folder_data'/fst.tmp'
 	$(rm $file_bash)
-    echo 'source /home/dong.r/nlc-master/bash_fst.sh' >> $file_bash
+    echo 'source /home/dong.r/OCR/bash_fst.sh' >> $file_bash
 	for i in $(seq $start $end);
     do
 		$(rm $file_bash'.'$i)
@@ -113,7 +113,7 @@ get_fst_for_group(){
     do
         cur_id=$(($i -$start + 1))
         cur_file_fst=$file_fst'.'$file_no'.'$start'.'$cur_id
-        echo 'sh '$file_bash'.'$i' &' >> $file_bash
+        echo 'sh '$file_bash'.'$i >> $file_bash
     done
     echo wait >> $file_bash
     for i in $(seq $start $end);
