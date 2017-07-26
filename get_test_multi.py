@@ -39,19 +39,20 @@ def split_data(train_id, split_id):
         if num_manual > 0:
             manual_line = int(items[8])
             total_man += 1
-        if num_wit > 0 and num_wit > 0:
-            if cur_date in train_date:
-                dict_split[wit_line] = (cur_begin, cur_end, line_id, manual_line, 0, total_man_wit)
-                num_dev += 1
-            elif cur_date in test_date:
-                dict_split[wit_line] = (cur_begin, cur_end, line_id, manual_line, 1, total_man_wit)
-                num_train += 1
-            elif cur_date in dev_date:
-                dict_split[wit_line] = (cur_begin, cur_end,  line_id, manual_line, 2, total_man_wit)
-                num_test += 1
-            else:
-                dict_split[wit_line] = (cur_begin, cur_end,  line_id, manual_line, 3, total_man_wit)
-                num_other += 1
+        if num_manual > 0 and num_wit > 0:
+            if len(cur_date) > 0:
+                if cur_date[0] in train_date:
+                    dict_split[wit_line] = (cur_begin, cur_end, line_id, manual_line, 0, total_man_wit)
+                    num_dev += 1
+                elif cur_date[0] in test_date:
+                    dict_split[wit_line] = (cur_begin, cur_end, line_id, manual_line, 1, total_man_wit)
+                    num_train += 1
+                elif cur_date[0] in dev_date:
+                    dict_split[wit_line] = (cur_begin, cur_end,  line_id, manual_line, 2, total_man_wit)
+                    num_test += 1
+                else:
+                    dict_split[wit_line] = (cur_begin, cur_end,  line_id, manual_line, 3, total_man_wit)
+                    num_other += 1
             total_man_wit += 1
     folder_split = join(folder_multi, str(train_id) + '_' + str(split_id))
     if not exists(folder_split):
@@ -112,7 +113,7 @@ def write_data(train_id, split_id):
 
 
 
-folder_data = '/scratch/dong.r/Dataset/OCR/richmind'
+folder_data = '/scratch/dong.r/Dataset/OCR/richmond'
 folder_multi = '/scratch/dong.r/Dataset/OCR/multi'
 
 train_ratio = 0.8
