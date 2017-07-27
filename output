@@ -1,0 +1,13 @@
+{'__flags': {'learning_rate_decay_factor': 0.95, 'tokenizer': 'CHAR', 'learning_rate': 0.0003, 'train_dir': '/scratch/dong.r/Dataset/OCR/model/nlc/tensorflow/', 'batch_size': 128, 'epochs': 40, 'max_seq_len': 100, 'print_every': 100, 'num_layers': 3, 'max_vocab_size': 40000, 'data_dir': '/scratch/dong.r/Dataset/OCR/data', 'max_gradient_norm': 10.0, 'optimizer': 'adam', 'dropout': 0.15, 'size': 400}, '__parsed': True}
+(TensorShape([]), TensorShape([Dimension(None)]), TensorShape([Dimension(None), Dimension(None)]), TensorShape([Dimension(None)]), TensorShape([Dimension(None), Dimension(None)]), TensorShape([Dimension(None), Dimension(400)]), TensorShape([Dimension(None), Dimension(400)]), TensorShape([Dimension(None), Dimension(400)]))
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
