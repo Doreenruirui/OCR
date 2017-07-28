@@ -118,10 +118,13 @@ def write_data(train_id, split_id):
         cur_y = list_y[i]
         cur_info = list_info[i]
         print cur_info
-        cur_train = dict_id2train[cur_info[-1]]
-        list_file[(cur_train, 'x')].write(cur_x + '\n')
-        list_file[(cur_train, 'y')].write(cur_y + '\n')
-        list_file[(cur_train, 'info')].write('\t'.join(map(str, cur_info[:-1])) + '\n')
+        if '#' in cur_y:
+            continue
+        else:
+            cur_train = dict_id2train[cur_info[-1]]
+            list_file[(cur_train, 'x')].write(cur_x + '\n')
+            list_file[(cur_train, 'y')].write(cur_y + '\n')
+            list_file[(cur_train, 'info')].write('\t'.join(map(str, cur_info[:-1])) + '\n')
 
     for item in list_file:
         list_file[item].close()
