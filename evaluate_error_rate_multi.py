@@ -8,8 +8,8 @@ import sys
 import plot_curve
 
 
-folder_data = '/Users/doreen/Documents/Experiment/dataset/OCR/'
-
+# folder_data = '/Users/doreen/Documents/Experiment/dataset/OCR/'
+folder_data = '/scratch/dong.r/Dataset/OCR'
 
 def remove(text):
     return re.sub(r'[^\x00-\x7F]', '', text)
