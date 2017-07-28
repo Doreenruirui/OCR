@@ -69,7 +69,7 @@ def padded(tokens, depth):
 def tokenize(sents, vocab, depth=FLAGS.num_layers):
     token_ids = []
     for sent in sents:
-        token_ids.append(nlc_data.sentence_to_token_ids(sent, vocab, get_tokenizer(FLAGS.tokenizer)))
+        token_ids.append(nlc_data.sentence_to_token_ids(sent.replace('-', '_'), vocab, get_tokenizer(FLAGS.tokenizer)))
     token_ids = padded(token_ids, depth)
     source = np.array(token_ids).T
     source_mask = (source != 0).astype(np.int32)
