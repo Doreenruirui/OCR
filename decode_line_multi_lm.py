@@ -66,7 +66,7 @@ def decode():
         lines = [ele.strip() for ele in f_.readlines()]
     with open(pjoin(data_dir, dev + '.y.txt'), 'r') as f_:
         truths = [ele.strip() for ele in f_.readlines()]
-    f_o = open(pjoin(folder_out, dev + '.em4.txt.' + str(lm_dir) + '.' + str(start) + '_' + str(end)), 'w')
+    f_o = open(pjoin(folder_out, dev + '.ec4.txt.' + str(lm_dir) + '.' + str(start) + '_' + str(end)), 'w')
     pool = Pool(10, initializer=initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir)))
     initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir))
     for line_id in range(start, end):
