@@ -38,20 +38,20 @@ end = -1
 
 
 def rank_sent(pool, sents):
-    res1 = score_sent([sents[0].replace('-', '_')])
-    res2 = score_sent([sents[1].replace('-', '_')])
-    print(res1, res2)
-    # probs = np.ones(len(sents)) * -1
-    # results = pool.map(score_sent, zip(np.arange(len(sents)), sents))
-    # max_str = ''
-    # max_prob = -1
-    # for tid, score in results:
-    #     cur_prob = np.power(10, -score)
-    #     probs[tid] = cur_prob
-    #     if cur_prob > max_prob:
-    #         max_prob = cur_prob
-    #         max_str = sents[tid]
-    # return max_str, max_prob, probs
+    #res1 = score_sent([sents[0].replace('-', '_')])
+    #res2 = score_sent([sents[1].replace('-', '_')])
+    #print(res1, res2)
+    probs = np.ones(len(sents)) * -1
+    results = pool.map(score_sent, zip(np.arange(len(sents)), sents))
+    max_str = ''
+    max_prob = -1
+    for tid, score in results:
+        cur_prob = np.power(10, -score)
+        probs[tid] = cur_prob
+        if cur_prob > max_prob:
+            max_prob = cur_prob
+            max_str = sents[tid]
+    return max_str, max_prob, probs
 
 
 def decode():
@@ -71,7 +71,7 @@ def decode():
     for line_id in range(start, end):
         line = lines[line_id]
         cur_truth = truths[line_id]
-        sents = [ele for ele in line.strip('\n').split('\t') if len(ele.strip()) > 0]
+        sents = [ele for ele in line.strip('\n').split('\t') if len(ele.strip()) > 0][0:100]
         if len(sents) > 0:
             best_sent, best_prob, probs = rank_sent(pool, sents)
             cur_dis = align(best_sent, cur_truth)
