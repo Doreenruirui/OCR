@@ -1,9 +1,8 @@
-##TODO: Prepare the Lexicon Transducer
-
 import pywrapfst as fst
 import numpy as np
 from os.path import join as pjoin
 import subprocess
+from nlc_data import remove_nonascii
 # from util_thread import split_task
 
 
@@ -14,16 +13,38 @@ dict_id2word = {}
 file_voc = ''
 tbl = None
 lm = None
-concat_f=None
+concat_f = None
 list_res = []
+
+
+def score_sent(paras):
+    global lm
+    if len(paras) == 1:
+        sent = paras[0]
+    else:
+        tid, sent = paras
+    f = sentence_fst(remove_nonascii(sent), 0)
+    score = float(fst.shortestdistance(fst.intersect(f, lm), reverse=True)[0])
+    if len(paras) == 1:
+        return score
+    else:
+        return tid, score
+
+
+def initialize_score(folder_voc, folder_lm):
+    global lm, tbl, file_voc
+    lm = fst.Fst.read(pjoin(folder_lm, 'train.mod'))
+    file_voc = pjoin(folder_voc, 'ascii.syms')
+    tbl = fst.SymbolTable.read_text(file_voc)
+    get_dict()
 
 
 def initialize(folder_lm):
     global lm, tbl, concat_f, file_voc
     file_voc = '/scratch/dong.r/Dataset/OCR/voc/ascii.syms'
-    lm = fst.Fst.read(pjoin(folder_lm ,'train.mod'))
+    lm = fst.Fst.read(pjoin(folder_lm,'train.mod'))
     tbl = fst.SymbolTable.read_text(file_voc)
-    concat_f=fst.Fst.read('/scratch/dong.r/Dataset/OCR/lm/concat.fst')
+    concat_f = fst.Fst.read('/scratch/dong.r/Dataset/OCR/lm/concat.fst')
     get_dict()
 
 
@@ -217,7 +238,6 @@ def get_fst_for_output(outputs, probs, w):
     final = combine_fst(list_fst)
     return final
 
-
 def concat_fst(list_fst):
     final = list_fst[0]
     for f in list_fst[1:]:
@@ -261,7 +281,7 @@ def get_fst_for_group_paral(pool, group, group_prob, pro_id, beam_size, file_no,
         list_res_file.append(pjoin(folder_data, 'fst.tmp.%d.%d_%d') % (file_no, start, end - 1))
     pool.map(thread_list_concat_fst, list_concat_file)
     final = list_concat_fst(list_res_file)
-    set_symbol(final)
+    # set_symbol(final)
     final = fst.shortestpath(fst.intersect(final, lm)).rmepsilon()
     string = print_path(final)
     return string
