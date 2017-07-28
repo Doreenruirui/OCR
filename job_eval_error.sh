@@ -12,7 +12,7 @@ folder_data='/scratch/dong.r/Dataset/OCR/'
 folder_script='/home/dong.r/OCR/script/'$script_name
 file_script=$folder_script'/run.sbatch.'
 nline=$(cat $folder_data'/'$cur_folder'/'$cur_prefix'.x.txt' | wc -l)
-chunk_size=10000
+chunk_size=5000
 nchunk=$(ceildiv $nline $chunk_size)
 echo $nline, $nchunk
 $(mkdir -p $folder_script)
