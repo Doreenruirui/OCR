@@ -70,7 +70,7 @@ def padded(tokens, depth):
 def tokenize(sents, vocab, depth=FLAGS.num_layers):
     token_ids = []
     for sent in sents:
-        token_ids.append(nlc_data.sentence_to_token_ids(sent, vocab, get_tokenizer(FLAGS.tokenizer)))
+        token_ids.append(nlc_data.sentence_to_token_ids(sent.replace('-', '_'), vocab, get_tokenizer(FLAGS.tokenizer)))
     token_ids = padded(token_ids, depth)
     source = np.array(token_ids).T
     source_mask = (source != 0).astype(np.int32)
@@ -154,7 +154,7 @@ def decode():
     f_o = open(pjoin(folder_out, FLAGS.dev + '.om2.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     for line_id in range(FLAGS.start, FLAGS.end):
         line = lines[line_id]
-        sents = [ele for ele in line.strip('\n').split('\t') if len(ele.strip()) > 0][:1000]
+        sents = [ele for ele in line.strip('\n').split('\t') if len(ele.strip()) > 0][:100]
         if len(sents) > 0:
             output_sents, output_probs = fix_sent(model, sess, sents)
             f_o.write('\n'.join(output_sents) + '\n')
