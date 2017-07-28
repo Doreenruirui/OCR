@@ -154,7 +154,8 @@ def decode():
     f_o = open(pjoin(folder_out, FLAGS.dev + '.om1.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     for line_id in range(FLAGS.start, FLAGS.end):
         line = lines[line_id]
-        sents = [ele for ele in line.strip('\n').split('\t') if len(ele.strip()) > 0][:100]
+        sents = [ele for ele in line.strip('\n').split('\t')][:100]
+        sents = [ele for ele in sents if len(ele.strip()) > 0]
         if len(sents) > 0:
             output_sents, output_probs = fix_sent(model, sess, sents)
             f_o.write('\n'.join(output_sents) + '\n')
