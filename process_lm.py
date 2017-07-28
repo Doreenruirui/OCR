@@ -2,7 +2,7 @@ import pywrapfst as fst
 import numpy as np
 from os.path import join as pjoin
 import subprocess
-from nlc_data import remove_nonascii
+import re
 # from util_thread import split_task
 
 
@@ -14,15 +14,18 @@ file_voc = ''
 tbl = None
 lm = None
 concat_f = None
-list_res = []
+rm_voc = []
 
+def remove_nonascii(text):
+    return re.sub(r'[^\x00-\x7F]', '', text)
 
 def score_sent(paras):
-    global lm
+    global lm, rm_voc
     if len(paras) == 1:
         sent = paras[0]
     else:
         tid, sent = paras
+    sent = ''.join([ele for ele in sent if ele not in rm_voc])
     f = sentence_fst(remove_nonascii(sent), 0)
     score = float(fst.shortestdistance(fst.intersect(f, lm), reverse=True)[0])
     if len(paras) == 1:
@@ -30,14 +33,26 @@ def score_sent(paras):
     else:
         return tid, score
 
+def get_voc_lm(folder_lm):
+    list_ilabel = []
+    for line in file(pjoin(folder_lm, 'train.mod.text')):
+        items  = line.split('\t')
+        if len(items) == 5:
+            list_ilabel.append(items[2])
+    return list(set(list_ilabel))
 
 def initialize_score(folder_voc, folder_lm):
-    global lm, tbl, file_voc
+    global lm, tbl, file_voc, rm_voc, dict_char2id
     lm = fst.Fst.read(pjoin(folder_lm, 'train.mod'))
     file_voc = pjoin(folder_voc, 'ascii.syms')
     tbl = fst.SymbolTable.read_text(file_voc)
     get_dict()
-
+    list_voc = get_voc_lm(folder_lm)
+    rm_voc = []
+    for char in dict_char2id:
+        if char not in list_voc:
+            rm_voc.append(char)
+    print('Remove: ', rm_voc)
 
 def initialize(folder_lm):
     global lm, tbl, concat_f, file_voc
@@ -66,7 +81,6 @@ def get_voc():
 
 def sentence_fst(sent, pb):
     global dict_char2id
-    sent = sent.replace('_', '-')
     f = fst.Fst()
     s = f.add_state()
     f.set_start(s)

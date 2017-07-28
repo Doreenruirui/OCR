@@ -13,9 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 
 import os
@@ -38,8 +35,8 @@ end = -1
 
 
 def rank_sent(pool, sents):
-    sents = [ele.replace('-', '_') for ele in sents]
-    #res1 = score_sent([sents[0].replace('-', '_')])
+    sents = [ele.replace('_', '-') for ele in sents]
+    res1 = score_sent([sents[0]])
     #res2 = score_sent([sents[1].replace('-', '_')])
     #print(res1, res2)
     probs = np.ones(len(sents)) * -1
@@ -72,7 +69,8 @@ def decode():
     for line_id in range(start, end):
         line = lines[line_id]
         cur_truth = truths[line_id]
-        sents = [ele for ele in line.strip('\n').split('\t')][0:100]
+        sents = [ele for ele in line.strip('\n').split('\t')]
+        #sents = [ele for ele in line.strip('\n').split('\t')][0:100]
         if len(sents) > 0:
             best_sent, best_prob, probs = rank_sent(pool, sents)
             best_dis = align(cur_truth, best_sent)
