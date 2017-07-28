@@ -153,7 +153,7 @@ def decode():
     for line_id in range(FLAGS.start, FLAGS.end):
         line = lines[line_id]
         cur_truth = truths[line_id].strip()
-        sents = [ele for ele in line.strip('\n').split('\t')]
+        sents = [ele for ele in line.strip('\n').split('\t')][:100]
         cur_dis = []
         for sent in sents[:1]:
             if len(sent) > 0:
