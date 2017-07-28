@@ -30,13 +30,22 @@ from six.moves import xrange
 import tensorflow as tf
 from os.path import join as pjoin
 
+<<<<<<< HEAD
 import nlc_model_multiple as nlc_model
+=======
+import nlc_model
+>>>>>>> 0c7868c9c32ba8e8b5d2b0f53ff575bdef2fbeb3
 #import nlc_model_global as nlc_model
 import nlc_data
 #import nlc_data_no_filter as nlc_data
 from util import initialize_vocabulary, get_tokenizer
 from multiprocessing import Pool
 import pdb
+<<<<<<< HEAD
+=======
+from levenshtein import align_one2many, align
+
+>>>>>>> 0c7868c9c32ba8e8b5d2b0f53ff575bdef2fbeb3
 
 from flag import FLAGS
 
@@ -65,10 +74,16 @@ def padded(tokens, depth):
   return map(lambda token_list: token_list + [0] * (padlen - len(token_list)), tokens)
 
 
+<<<<<<< HEAD
 def tokenize(sents, vocab, depth=FLAGS.num_layers):
     token_ids = []
     for sent in sents:
         token_ids.append(nlc_data.sentence_to_token_ids(sent, vocab, get_tokenizer(FLAGS.tokenizer)))
+=======
+def tokenize(sent, vocab, depth=FLAGS.num_layers):
+    token_ids = []
+    token_ids.append(nlc_data.sentence_to_token_ids(sent, vocab, get_tokenizer(FLAGS.tokenizer)))
+>>>>>>> 0c7868c9c32ba8e8b5d2b0f53ff575bdef2fbeb3
     token_ids = padded(token_ids, depth)
     source = np.array(token_ids).T
     source_mask = (source != 0).astype(np.int32)
@@ -115,9 +130,12 @@ def fix_sent(model, sess, sent):
     input_toks, mask = tokenize(sent, vocab)
     # Encode
     encoder_output = model.encode(sess, input_toks, mask)
+<<<<<<< HEAD
     s1, s2, s3 = encoder_output.shape
     encoder_output = np.transpose(encoder_output, (1, 0, 2))
     encoder_output = np.reshape(encoder_output, [s2, s1, 1, s3])
+=======
+>>>>>>> 0c7868c9c32ba8e8b5d2b0f53ff575bdef2fbeb3
     len_input = mask.shape[0]
     # Decode
     beam_toks, probs, prob_trans = decode_beam(model, sess, encoder_output, FLAGS.beam_size, len_input)
@@ -149,6 +167,7 @@ def decode():
     model = create_model(sess, vocab_size, True)
     tic = time.time()
     with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.x.txt'), 'r') as f_:
+<<<<<<< HEAD
         lines = [ele.strip() for ele in f_.readlines()]
     f_o = open(pjoin(folder_out, FLAGS.dev + '.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     for line_id in range(FLAGS.start, FLAGS.end):
@@ -162,6 +181,31 @@ def decode():
             sent = output_sents[i]
             prob = output_probs[i]
             f_o.write(sent + '\t' + str(prob) + '\n')
+=======
+        lines = [ele.strip().lower() for ele in f_.readlines()]
+    with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.y.txt'), 'r') as f_:
+        truths = [ele.strip().lower() for ele in f_.readlines()]
+    f_o = open(pjoin(folder_out, FLAGS.dev + '.em3.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+    pool = Pool(100)
+    for line_id in range(FLAGS.start, FLAGS.end):
+        line = lines[line_id]
+        cur_truth = truths[line_id].strip()
+        sents = [ele for ele in line.strip('\n').split('\t') if len(ele.strip()) > 0]
+        cur_dis = []
+        for sent in sents[:1]:
+            if len(sent) > 0:
+                output_sents, output_probs = fix_sent(model, sess, sent)
+                ocr_dis = align(cur_truth, sent)
+                top_dis = align(cur_truth, output_sents[0])
+                best_dis, best_str = align_one2many(pool, cur_truth, output_sents, 1)
+                cur_dis.append(ocr_dis)
+                cur_dis.append(top_dis)
+                cur_dis.append(best_dis)
+        if len(cur_dis) > 0:
+            f_o.write('\t'.join(map(str,cur_dis)) + '\t' + str(len(cur_truth)) + '\n')
+        else:
+            f_o.write('\n')
+>>>>>>> 0c7868c9c32ba8e8b5d2b0f53ff575bdef2fbeb3
         if line_id % 100 == 0:
             toc = time.time()
             print(toc - tic)

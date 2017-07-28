@@ -36,6 +36,8 @@ import nlc_data
 #import nlc_data_no_filter as nlc_data
 from util import initialize_vocabulary, get_tokenizer
 from multiprocessing import Pool
+from levenshtein import align_one2many, align
+from multiprocessing import Pool
 import pdb
 
 from flag import FLAGS
@@ -149,18 +151,17 @@ def decode():
     tic = time.time()
     with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.x.txt'), 'r') as f_:
         lines = [ele.strip() for ele in f_.readlines()]
-    f_o = open(pjoin(folder_out, FLAGS.dev + '.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+    with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.y.txt'), 'r') as f_:
+        truths = [ele.strip() for ele in f_.readlines()]
+    f_o = open(pjoin(folder_out, FLAGS.dev + '.om2.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     for line_id in range(FLAGS.start, FLAGS.end):
         line = lines[line_id]
-        sents = [ele for ele in line.strip('\n').split('\t') if len(ele.strip()) > 0]
-        # if len(sent) == 0:
-        #     f_o.write('\n' * 100)
-        #     continue
-        output_sents, output_probs = fix_sent(model, sess, sents)
-        for i in range(len(output_sents)):
-            sent = output_sents[i]
-            prob = output_probs[i]
-            f_o.write(sent + '\t' + str(prob) + '\n')
+        sents = [ele for ele in line.strip('\n').split('\t') if len(ele.strip()) > 0][:1000]
+        if len(sents) > 0:
+            output_sents, output_probs = fix_sent(model, sess, sents)
+            f_o.write('\n'.join(output_sents) + '\n')
+        else:
+            f_o.write('\n' * 100)
         if line_id % 100 == 0:
             toc = time.time()
             print(toc - tic)
