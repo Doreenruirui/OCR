@@ -25,7 +25,7 @@ import numpy as np
 from os.path import join as pjoin
 from multiprocessing import Pool
 from process_lm import score_sent, initialize_score
-from levenshtein import align
+from levenshtein import align_pair, align
 
 
 folder_data = ''
@@ -66,7 +66,7 @@ def decode():
         lines = [ele.strip() for ele in f_.readlines()]
     with open(pjoin(data_dir, dev + '.y.txt'), 'r') as f_:
         truths = [ele.strip() for ele in f_.readlines()]
-    f_o = open(pjoin(folder_out, dev + '.om4.txt.' + str(lm_dir) + '.' + str(start) + '_' + str(end)), 'w')
+    f_o = open(pjoin(folder_out, dev + '.em4.txt.' + str(lm_dir) + '.' + str(start) + '_' + str(end)), 'w')
     pool = Pool(10, initializer=initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir)))
     initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir))
     for line_id in range(start, end):
@@ -75,10 +75,11 @@ def decode():
         sents = [ele for ele in line.strip('\n').split('\t')][0:100]
         if len(sents) > 0:
             best_sent, best_prob, probs = rank_sent(pool, sents)
-            cur_dis = align(best_sent, cur_truth)
-            f_o.write('%d\t%d\n' % (cur_dis, len(cur_truth)))
+            best_dis = align(cur_truth, best_sent)
+            cur_dis = align_pair(pool, [cur_truth for _ in sents], sents)
+            f_o.write(str(best_dis) + '\t' + '\t'.join([str(dis) + '\t' + str(prob) for dis, prob in zip(cur_dis, probs)]))
         else:
-            f_o.write('%d\t%d\n' % (len(cur_truth), len(cur_truth)))
+            f_o.write(str(len(cur_truth)) + '\t' + '\t'.join([str(len(cur_truth)) + '\t1' for _ in sents]))
         if line_id % 100 == 0:
             toc = time.time()
             print(toc - tic)
