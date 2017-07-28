@@ -43,18 +43,20 @@ def split_data(train_id, split_id):
             total_man += 1
         print line_id
         if num_manual > 0 and num_wit > 0:
-            if len(cur_date) > 0 and wit_line not in dict_split:
+            if len(cur_date) > 0:
+                if wit_line not in dict_split:
+                    dict_split[wit_line] = []
                 if cur_date[0] in train_date:
-                    dict_split[wit_line] = (cur_begin, cur_end, line_id, manual_line, 0, total_date)
+                    dict_split[wit_line].append((cur_begin, cur_end, line_id, manual_line, 0, total_date, cur_date))
                     num_train += 1
                 elif cur_date[0] in test_date:
-                    dict_split[wit_line] = (cur_begin, cur_end, line_id, manual_line, 1, total_date)
+                    dict_split[wit_line].append((cur_begin, cur_end, line_id, manual_line, 1, total_date, cur_date))
                     num_test += 1
                 elif cur_date[0] in dev_date:
-                    dict_split[wit_line] = (cur_begin, cur_end,  line_id, manual_line, 2, total_date)
+                    dict_split[wit_line].append((cur_begin, cur_end,  line_id, manual_line, 2, total_date, cur_date))
                     num_dev += 1
                 else:
-                    dict_split[wit_line] = (cur_begin, cur_end,  line_id, manual_line, 3, total_date)
+                    dict_split[wit_line].append((cur_begin, cur_end,  line_id, manual_line, 3, total_date, cur_date))
                     num_other += 1
                 total_date += 1
             total_man_wit += 1
@@ -91,17 +93,18 @@ def write_data(train_id, split_id):
     print num_line, len(list_x), len(pair_x)
     for line in file(join(folder_multi, 'pair.y')):
         if line_id in dict_split:
-            info = dict_split[line_id]
-            b_id = info[0]
-            e_id = info[1]
-            x_id = info[2]
-            z_id = info[3]
-            flag_train = info[4]
-            total_id = info[5]
-            print x_id
-            list_x[total_id] = pair_x[x_id] + '\t' + line.strip('\n')
-            list_y[total_id] = pair_z[z_id]
-            list_info[total_id] = [b_id, e_id, flag_train]
+            for info in dict_split[line_id]:
+                b_id = info[0]
+                e_id = info[1]
+                x_id = info[2]
+                z_id = info[3]
+                flag_train = info[4]
+                total_id = info[5]
+                cur_date=info[6]
+                print x_id
+                list_x[total_id] = pair_x[x_id] + '\t' + line.strip('\n')
+                list_y[total_id] = pair_z[z_id]
+                list_info[total_id] = [cur_date, b_id, e_id, flag_train]
         line_id += 1
 
     list_file = {}
@@ -128,10 +131,10 @@ def write_data(train_id, split_id):
 
 
 folder_data = '/scratch/dong.r/Dataset/OCR/richmond'
-folder_multi = '/scratch/dong.r/Dataset/OCR/multi'
+folder_multi = '/scratch/dong.r/Dataset/OCR/multi_new'
 
 train_ratio = 0.8
-tid = int(sys.argv[1])
-sid = int(sys.argv[2])
-#split_data(tid, sid)
+tid = 0
+sid = 0
+split_data(tid, sid)
 write_data(tid, sid)
