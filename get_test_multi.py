@@ -75,11 +75,12 @@ def write_data(train_id, split_id):
         os.makedirs(folder_split)
     dict_split = load_obj(join(folder_split, 'split_' + str(train_id) + '_' + str(split_id)))
     max_line = 0
-    for item in dict_split:
-        if dict_split[item][-1] > max_line:
-            max_line = dict_split[item][-1]
+    for witline in dict_split:
+        for item in dict_split[witline]:
+            if item[-2] > max_line:
+                max_line = item[-2]
     print max_line
-    num_line = len(dict_split.keys())
+    num_line = max_line + 1
     pair_x = []
     for line in file(join(folder_multi, 'pair.x')):
         pair_x.append(line.strip('\n'))
@@ -134,10 +135,10 @@ def write_data(train_id, split_id):
 
 
 folder_data = '/scratch/dong.r/Dataset/OCR/richmond'
-folder_multi = '/scratch/dong.r/Dataset/OCR/multi_new'
+folder_multi = '/scratch/dong.r/Dataset/OCR/multi'
 
 train_ratio = 0.8
 tid = 0
 sid = 0
-split_data(tid, sid)
+#split_data(tid, sid)
 write_data(tid, sid)

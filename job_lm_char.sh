@@ -41,10 +41,10 @@ machine=$3
 jobname=$4
 folder_data='/scratch/dong.r/Dataset/OCR/'$folder_name
 file_symbol='/scratch/dong.r/Dataset/OCR/voc/ascii.syms'
-folder_script='/home/dong.r/OCR/script/lm_gutern'
+folder_script='/home/dong.r/OCR/script/lm_richmond'
 file_script=$folder_script'/run.sbatch.'
 nline=$(cat $folder_data/train.text | wc -l)
-nfile=$(ceildiv $nline $2)
+nfile=$(ceildiv $nline $size)
 echo $nline, $nfile
 $(mkdir -p $folder_script)
 for i in $(seq 1 $nfile);
@@ -52,10 +52,10 @@ do
     cur_file=$file_script$i
     j=$(($i-1))
     k=$(($j*$size))
-    cur_cmd='./run_lm_char_line.sh '$folder_data' '$i' '$k' '$size' '$nline
+    cur_cmd='./job_lm_char_line.sh '$folder_data' '$i' '$k' '$size' '$nline
     $(rm_file $cur_file)
     $(writejob $cur_file $jobname $i $folder_script $machine)
-    echo 'source ~/.bashrc' >> $cur_file
+    #echo 'source ~/.bashrc' >> $cur_file
     echo ''$cur_cmd >> $cur_file
     #$(sbatch $cur_file)
 done

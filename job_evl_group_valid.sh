@@ -32,7 +32,7 @@ do
                 end=$( (($nline <= $end)) && echo "$nline" || echo "$end" )
                 $(writejob $cur_file $jobname $i'.'$w1'.'$w2'.'$lm_name $folder_script $machine)
                 echo python decode_line.py $cur_folder $cur_out $cur_prefix $start $end $beam $w1 $w2 $folder_lm>> $cur_file
-                $(sbatch $cur_file)
+                #$(sbatch $cur_file)
             done
     done
 done

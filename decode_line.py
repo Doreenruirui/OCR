@@ -17,6 +17,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+
 import os
 import numpy as np
 from six.moves import xrange
@@ -36,16 +37,16 @@ lm_dir=''
 dev = ''
 start = 0
 end = 0
-nthread=100
-beam_size=100
-weight1=100
-weight2=10
+nthread = 100
+beam_size = 100
+weight1 = 100
+weight2 = 10
 
 
 def decode():
     # Prepare NLC data.
     global out_dir, data_dir, lm_dir, dev, start, end, nthread, beam_size, weight1, weight2
-    lm_name=lm_dir.split('/')[-1]
+    lm_name = lm_dir.split('/')[-1]
     new_out_dir = pjoin(out_dir, str(weight1) + '_' + str(weight2) + '_' + lm_name)
     if not exists(new_out_dir):
         os.makedirs(new_out_dir)
@@ -62,7 +63,7 @@ def decode():
         cur_id = line_ids[i]
         dict_id2line[cur_id] = i
     initialize(lm_dir)
-    num_empty=0
+    num_empty = 0
     pool = Pool(processes=nthread, initializer=get_dict())
     f_o2 = open(pjoin(new_out_dir, dev + '.e2.txt.' + str(start) + '_' + str(end)), 'w')
     for i in range(group_info.shape[0]):
@@ -92,7 +93,6 @@ def decode():
     print(num_empty)
 
 
-
 def main():
     global out_dir, data_dir, dev, start, end, nthread, beam_size, weight1, weight2, lm_dir
     data_dir = '/scratch/dong.r/Dataset/OCR/' + sys.argv[1]
@@ -101,9 +101,9 @@ def main():
     start = int(sys.argv[4])
     end = int(sys.argv[5])
     beam_size = int(sys.argv[6])
-    weight1=float(sys.argv[7])
-    weight2=float(sys.argv[8])
-    lm_dir=sys.argv[9]
+    weight1 = float(sys.argv[7])
+    weight2 = float(sys.argv[8])
+    lm_dir = sys.argv[9]
     decode()
 
 main()

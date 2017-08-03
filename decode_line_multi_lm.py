@@ -14,7 +14,7 @@
 # ==============================================================================
 
 
-
+import re
 import os
 import sys
 import time
@@ -34,13 +34,18 @@ start = 0
 end = -1
 
 
+def remove_nonascii(text):
+    return re.sub(r'[^\x00-\x7F]', ' ', text)
+
+
 def rank_sent(pool, sents):
-    sents = [ele.replace('_', '-') for ele in sents]
-    res1 = score_sent([sents[0]])
+    res1 = score_sent([0, remove_nonascii(sents[0].replace('_', '-'))])
+    res2 = score_sent([0, remove_nonascii(sents[1].replace('_', '-'))])
+    new_sents = [remove_nonascii(ele.replace('_', '-')) for ele in sents]
     #res2 = score_sent([sents[1].replace('-', '_')])
     #print(res1, res2)
     probs = np.ones(len(sents)) * -1
-    results = pool.map(score_sent, zip(np.arange(len(sents)), sents))
+    results = pool.map(score_sent, zip(np.arange(len(sents)), new_sents))
     max_str = ''
     max_prob = -1
     for tid, score in results:
@@ -60,29 +65,39 @@ def decode():
         os.makedirs(folder_out)
     tic = time.time()
     with open(pjoin(data_dir, dev + '.x.txt'), 'r') as f_:
-        lines = [ele.strip() for ele in f_.readlines()]
+        lines = [ele for ele in f_.readlines()]
     with open(pjoin(data_dir, dev + '.y.txt'), 'r') as f_:
-        truths = [ele.strip() for ele in f_.readlines()]
-    f_o = open(pjoin(folder_out, dev + '.ec4.txt.' + str(lm_dir) + '.' + str(start) + '_' + str(end)), 'w')
-    pool = Pool(10, initializer=initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir)))
+        truths = [ele.strip().lower() for ele in f_.readlines()]
+    f_o = open(pjoin(folder_out, dev + '.' + str(lm_dir) + '.' + 'ec4.txt.' + str(start) + '_' + str(end)), 'w')
+    f_b = open(pjoin(folder_out, dev + '.' + str(lm_dir) + '.' + 'om4.txt.' + str(start) + '_' + str(end)), 'w')
+    pool = Pool(100, initializer=initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir)))
     initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir))
     for line_id in range(start, end):
         line = lines[line_id]
         cur_truth = truths[line_id]
-        sents = [ele for ele in line.strip('\n').split('\t')]
-        #sents = [ele for ele in line.strip('\n').split('\t')][0:100]
+        sents = [ele for ele in line.strip('\n').split('\t')][:100]
+        sents = [ele.strip() for ele in sents if len(ele.strip()) > 0]
         if len(sents) > 0:
+            if 'low' in lm_dir:
+                sents = [ele.lower() for ele in sents]
             best_sent, best_prob, probs = rank_sent(pool, sents)
-            best_dis = align(cur_truth, best_sent)
-            cur_dis = align_pair(pool, [cur_truth for _ in sents], sents)
-            f_o.write(str(best_dis) + '\t' + '\t'.join([str(dis) + '\t' + str(prob) for dis, prob in zip(cur_dis, probs)]))
+            best_dis = align(cur_truth, best_sent.lower())
+            # cur_dis = align_pair(pool, [cur_truth for _ in sents], [ele.lower() for ele in sents])
+            min_index = np.argmin(probs)
+            min_dis = align(cur_truth, sents[min_index].lower())
+            f_o.write(str(best_dis) + '\t' + str(min_dis) + '\t' + str(len(cur_truth)) + '\n')
+            f_b.write(best_sent + '\n')
+            # f_o.write(str(best_dis) + '\t' + str(min_dis) + '\t' + '\t'.join([str(dis) + '\t' + str(prob) for dis, prob in zip(cur_dis, probs)]) + '\n')
         else:
-            f_o.write(str(len(cur_truth)) + '\t' + '\t'.join([str(len(cur_truth)) + '\t1' for _ in sents]))
+            f_o.write(str(len(cur_truth)) + '\t' + str(len(cur_truth)) + '\t' + str(len(cur_truth))  + '\n')
+            f_b.write('' + '\n')
+            # f_o.write(str(len(cur_truth)) + '\t' + str(len(cur_truth)) + '\t' + '\t'.join([str(len(cur_truth)) + '\t1' for _ in sents]) + '\n')
         if line_id % 100 == 0:
             toc = time.time()
             print(toc - tic)
             tic = time.time()
     f_o.close()
+    f_b.close()
 
 
 def main():

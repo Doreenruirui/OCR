@@ -36,7 +36,6 @@ import nlc_data
 #import nlc_data_no_filter as nlc_data
 from util import initialize_vocabulary, get_tokenizer
 from multiprocessing import Pool
-import kenlm
 import pdb
 
 from flag import FLAGS
@@ -153,11 +152,14 @@ def decode():
         if len(sent) == 0:
             f_o.write('\n' * 100)
             continue
-        output_sents, output_probs = fix_sent(model, sess, sent)
+        #output_sents, output_probs = fix_sent(model, sess, sent)
+        output_sents, output_probs = fix_sent(model, sess, sent.replace('-', '_'))
         for i in range(len(output_sents)):
-            sent = output_sents[i]
+            #sent = output_sents[i]
+            sent = output_sents[i].replace('_', '-')
             prob = output_probs[i]
-            f_o.write(sent + '\t' + str(prob) + '\n')
+            f_o.write(sent + '\n')
+            # f_o.write(sent + '\t' + str(prob) + '\n')
         if line_id % 100 == 0:
             toc = time.time()
             print(toc - tic)

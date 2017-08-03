@@ -11,6 +11,7 @@ script_name=$8
 folder_data='/scratch/dong.r/Dataset/OCR/'
 folder_script='/home/dong.r/OCR/script/'$script_name
 file_script=$folder_script'/run.sbatch.'
+echo $file_script
 nline=$(cat $folder_data'/'$cur_folder'/'$cur_prefix'.x.txt' | wc -l)
 chunk_size=5000
 nchunk=$(ceildiv $nline $chunk_size)
@@ -23,7 +24,7 @@ do
     j=$(($i - 1))
     start=$(($j * $chunk_size))
     end=$(($i * chunk_size))
-    end=$( (($nline <= $end)) && echo "$nline" || echo "$end" )
+    #end=$( (($nline <= $end)) && echo "$nline" || echo "$end" )
     $(writejob $cur_file $jobname $i $folder_script $machine)
     echo python evaluate_error_rate_multi.py $cur_folder $cur_prefix $cur_out $beam $start $end $cur_group>> $cur_file
 done

@@ -1,6 +1,6 @@
-source /home/dong.r/.bash_profile
-source activate tensorflow 
-python decode_line_simple.py \
+#source /home/dong.r/.bash_profile
+#source activate tensorflow 
+python -m pdb decode_line_multi.py \
     --data_dir='/scratch/dong.r/Dataset/OCR/'$1 \
     --train_dir='/scratch/dong.r/Model/OCR/nlc/'$2 \
     --out_dir='/scratch/dong.r/Dataset/OCR/'$1'/'$3 \
@@ -9,4 +9,4 @@ python decode_line_simple.py \
     --start=$5 \
     --end=$6 \
     --print_every=200 
-source deactivate
+#source deactivate

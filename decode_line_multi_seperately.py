@@ -67,7 +67,7 @@ def padded(tokens, depth):
 
 def tokenize(sent, vocab, depth=FLAGS.num_layers):
     token_ids = []
-    token_ids.append(nlc_data.sentence_to_token_ids(sent.replace('-', '_'), vocab, get_tokenizer(FLAGS.tokenizer)))
+    token_ids.append(nlc_data.sentence_to_token_ids(sent, vocab, get_tokenizer(FLAGS.tokenizer)))
     token_ids = padded(token_ids, depth)
     source = np.array(token_ids).T
     source_mask = (source != 0).astype(np.int32)
@@ -145,7 +145,7 @@ def decode():
     model = create_model(sess, vocab_size, True)
     tic = time.time()
     with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.x.txt'), 'r') as f_:
-        lines = [ele.strip().lower() for ele in f_.readlines()]
+        lines = [ele for ele in f_.readlines()]
     with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.y.txt'), 'r') as f_:
         truths = [ele.strip().lower() for ele in f_.readlines()]
     f_o = open(pjoin(folder_out, FLAGS.dev + '.ec3.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
@@ -153,12 +153,15 @@ def decode():
     for line_id in range(FLAGS.start, FLAGS.end):
         line = lines[line_id]
         cur_truth = truths[line_id].strip()
+        # sents = [ele for ele in line.strip('\n').split('\t')]
         sents = [ele for ele in line.strip('\n').split('\t')][:100]
         cur_dis = []
         for sent in sents[:1]:
+            sent = sent.strip()
             if len(sent) > 0:
-                output_sents, output_probs = fix_sent(model, sess, sent)
-                ocr_dis = align(cur_truth, sent)
+                output_sents, output_probs = fix_sent(model, sess, sent.replace('-', '_'))
+                output_sents = [ele.replace('_', '-').lower()  for ele in output_sents]
+                ocr_dis = align(cur_truth, sent.lower())
                 top_dis = align(cur_truth, output_sents[0])
                 best_dis, best_str = align_one2many(pool, cur_truth, output_sents, 1)
                 cur_dis.append(ocr_dis)

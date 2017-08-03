@@ -155,20 +155,19 @@ def initialize_vocabulary(vocabulary_path, bpe=False):
 
 def data_to_token_ids(data_path, target_path, vocabulary_path,
                       tokenizer=None, normalize_digits=False):
-    if not gfile.Exists(target_path):
-        print("Tokenizing data in %s" % data_path)
-        vocab, _ = initialize_vocabulary(vocabulary_path, bpe=(tokenizer==bpe_tokenizer))
-        with gfile.GFile(data_path, mode="rb") as data_file:
-            with gfile.GFile(target_path, mode="w") as tokens_file:
-                counter = 0
-                for line in data_file:
-                    counter += 1
-                    if counter % 100000 == 0:
-                        print("  tokenizing line %d" % counter)
-                    line = remove_nonascii(line)
-                    token_ids = sentence_to_token_ids(line, vocab, tokenizer,
-                                                      normalize_digits)
-                    tokens_file.write(" ".join([str(tok) for tok in token_ids]) + "\n")
+    print("Tokenizing data in %s" % data_path)
+    vocab, _ = initialize_vocabulary(vocabulary_path, bpe=(tokenizer==bpe_tokenizer))
+    with open(data_path, mode="r") as data_file:
+        with open(target_path, mode="w") as tokens_file:
+            counter = 0
+            for line in data_file:
+                counter += 1
+                if counter % 100000 == 0:
+                    print("  tokenizing line %d" % counter)
+                line = remove_nonascii(line).strip()
+                token_ids = sentence_to_token_ids(line, vocab, tokenizer,
+                                                  normalize_digits)
+                tokens_file.write(" ".join([str(tok) for tok in token_ids]) + "\n")
 
 
 def tokenize_data(data_dir, prefix, tokenizer):
@@ -178,8 +177,8 @@ def tokenize_data(data_dir, prefix, tokenizer):
     # Create token ids for the training data.
     y_ids_path = os.path.join(data_dir, prefix + ".ids.y")
     x_ids_path = os.path.join(data_dir, prefix + ".ids.x")
-    data_to_token_ids(path_x, y_ids_path, vocab_path, tokenizer)
-    data_to_token_ids(path_y, x_ids_path, vocab_path, tokenizer)
+    data_to_token_ids(path_x, x_ids_path, vocab_path, tokenizer)
+    data_to_token_ids(path_y, y_ids_path, vocab_path, tokenizer)
     return (x_ids_path, y_ids_path)
 
 

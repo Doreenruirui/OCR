@@ -60,7 +60,7 @@ def write_file(error_ratio, split_id):
             x_list.append(x)
             y_list.append(y)
     num_pair = len(pairs_info)
-    train_id = OrderedDict()
+    train_id i OrderedDict()
     test_id = OrderedDict()
     dev_id = OrderedDict()
     for i in range(num_pair):

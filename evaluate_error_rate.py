@@ -42,7 +42,7 @@ def evaluate_best(folder_name, out_folder, prefix='dev', beam_size=100, start=0,
     if end == -1:
         file_name = pjoin(folder_data, out_folder, prefix + '.o.txt')
     else:
-        file_name = pjoin(folder_data, out_folder, prefix + '.om1.txt.' + str(start) + '_' + str(end))
+        file_name = pjoin(folder_data, out_folder, prefix + '.o.txt.' + str(start) + '_' + str(end))
     line_id = 0
     list_dec = []
     list_beam = []
@@ -58,7 +58,7 @@ def evaluate_best(folder_name, out_folder, prefix='dev', beam_size=100, start=0,
         list_beam.append(cur_str)
     list_dec.append(list_beam)
     with open(pjoin(folder_data, prefix + '.x.txt'), 'r') as f_:
-        list_x = [ele.strip('\n').lower() for ele in f_.readlines()][start:end]
+        list_x = [ele.strip().lower().replace('-', '_') for ele in f_.readlines()][start:end]
     with open(pjoin(folder_data, prefix + '.y.txt'), 'r') as f_:
         list_y = [ele.strip().lower() for ele in f_.readlines()][start:end]
     len_yc = [len(y) for y in list_y]
@@ -69,20 +69,20 @@ def evaluate_best(folder_name, out_folder, prefix='dev', beam_size=100, start=0,
     dis_by, best_str = align_beam(P, list_y, list_dec, 1)
     dis_ty = align_pair(P, list_y,  list_top, 1)
     dis_xy = align_pair(P, list_y, list_x,  1)
-    dis_by_w, best_str_w = align_beam(P, list_y, list_dec, 0)
-    dis_ty_w = align_pair(P, list_y, list_top, 0)
-    dis_xy_w = align_pair(P, list_y, list_top, 0)
+    #dis_by_w, best_str_w = align_beam(P, list_y, list_dec, 0)
+    #dis_ty_w = align_pair(P, list_y, list_top, 0)
+    #dis_xy_w = align_pair(P, list_y, list_top, 0)
     dis_char = np.asarray(zip(dis_by, dis_ty, dis_xy, len_yc))
-    dis_word = np.asarray(zip(dis_by_w, dis_ty_w, dis_xy_w, len_yw))
+    #dis_word = np.asarray(zip(dis_by_w, dis_ty_w, dis_xy_w, len_yw))
     if end == -1:
-        outfile_char = pjoin(folder_data, out_folder, prefix + '.ec1.txt')
+        outfile_char = pjoin(folder_data, out_folder, prefix + '.ec.txt')
 
-        outfile_word  = pjoin(folder_data, out_folder, prefix + '.ew1.txt')
+        #outfile_word  = pjoin(folder_data, out_folder, prefix + '.ew.txt')
     else:
-        outfile_char = pjoin(folder_data, out_folder, prefix + '.ec1.txt.' + str(start) + '_' + str(end))
-        outfile_word = pjoin(folder_data, out_folder, prefix + '.ew1.txt.' + str(start) + '_' + str(end))
+        outfile_char = pjoin(folder_data, out_folder, prefix + '.ec.txt.' + str(start) + '_' + str(end))
+        #outfile_word = pjoin(folder_data, out_folder, prefix + '.ew.txt.' + str(start) + '_' + str(end))
     np.savetxt(outfile_char, dis_char, fmt='%d')
-    np.savetxt(outfile_word, dis_word, fmt='%d')
+    #np.savetxt(outfile_word, dis_word, fmt='%d')
     #with open(pjoin(folder_data, out_folder, prefix + '.bc1.txt.' + str(start) + '_' + str(end)), 'w') as f_:
     #    for cur_str in best_str:
     #        f_.write(cur_str + '\n')

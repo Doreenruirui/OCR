@@ -354,7 +354,7 @@ def write_file_train_all(error_ratio, train_id, split_id):
                 num_train += 1
                 for line in file(join('/scratch/dong.r/Dataset/unprocessed/richmond', 'richmond-dispatch-correct', fn)):
                     if len(line.strip()) > 0 and 'Column: ' not in line:
-                        cur_str =  remove_nonascii(line[:-1].replace('###UNCLEAR### ', ''))
+                        cur_str =  remove_nonascii(line[:-1].replace('###UNCLEAR###', '  '))
                         cur_str = ' '.join([ele for ele in cur_str.split() if len(ele.strip()) > 0])
                         f_.write(cur_str + '\n')
     f_.close()

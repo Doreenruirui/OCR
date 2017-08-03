@@ -16,8 +16,10 @@ lm = None
 concat_f = None
 rm_voc = []
 
+
 def remove_nonascii(text):
-    return re.sub(r'[^\x00-\x7F]', '', text)
+    return re.sub(r'[^\x00-\x7F]', ' ', text)
+
 
 def score_sent(paras):
     global lm, rm_voc
@@ -90,7 +92,10 @@ def sentence_fst(sent, pb):
         f.add_arc(s, fst.Arc(cur_id, cur_id, -pb, n))
         f.set_final(n, 0.0)
     else:
+        n = s
         for char in sent:
+            if len(char.strip()) > 0 and char not in dict_char2id:
+                continue
             n = f.add_state()
             if char != ' ':
                 cur_id = dict_char2id[char]
