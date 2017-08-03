@@ -26,7 +26,7 @@ from PyLib import operate_file as opf
 from levenshtein import align, align_one2many
 from collections import OrderedDict
 from multiprocessing import Pool
-from process_lm import *
+from util import *
 import sys
 from os.path import exists
 
