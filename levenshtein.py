@@ -140,12 +140,54 @@ def align_one2many_thread(para):
             min_str = list_str[i]
     return thread_num, min_dis, min_str
 
+
 def align_one2one(para):
     thread_num, str1, str2, flag_char = para
     if flag_char:
         return thread_num, align(str1, str2)
     else:
         return thread_num, align(str1.split(), str2.split())
+
+
+def recover_thread(para):
+    thread_num, str1, str2 = para
+    res_op = {}
+    cur_op, cur_b, cur_m, cur_e = recover(str1.strip(), str2.strip())
+    for ele in cur_op:
+        if ele not in res_op:
+            res_op[ele] = {}
+        for k in cur_op[ele]:
+            res_op[ele][k] = res_op[ele].get(k, 0) + cur_op[ele][k]
+    return thread_num, res_op, cur_b, cur_m, cur_e
+
+
+def recover_pair(P, truth, cands, nthread):
+    global output, output_str
+    output = np.zeros(nthread)
+    output_str = ['' for _ in range(nthread)]
+    ncand = len(cands)
+    ncand_thread = int(np.floor(ncand * 1. / (nthread - 1)))
+    paras = [(truth[x * ncand_thread: min((x + 1) * ncand_thread, ncand)],
+              cands[x * ncand_thread: min((x + 1) * ncand_thread, ncand)],
+              x)
+             for x in range(nthread)]
+
+    results = P.map(recover_thread, paras)
+    res_op = {}
+    begin = 0
+    middle = 0
+    end = 0
+    for i in range(nthread):
+        thread_num, cur_op, cur_b, cur_m, cur_e = results[i]
+        for ele in cur_op:
+            if ele not in res_op:
+                res_op[ele] = {}
+            for k in cur_op[ele]:
+                res_op[ele][k] = res_op[ele].get(k, 0) + cur_op[ele][k]
+        begin += cur_b
+        middle += cur_m
+        end += cur_e
+    return res_op, begin, middle, end
 
 
 def align_one2many(P, truth, cands, flag_char=1):
@@ -194,206 +236,3 @@ def align_beam(P, truth, cands, flag_char=1):
         list_dis[cur_thread] = cur_dis
         list_str[cur_thread] = cur_str
     return list_dis, list_str
-
-# def recover_thread(para):
-#     list_str1, list_str2, thread_num = para
-#     res_op = {}
-#     begin = 0
-#     end = 0
-#     middle = 0
-#     for i in range(len(list_str1)):
-#         str1 = list_str1[i]
-#         str2 = list_str2[i]
-#         cur_op, cur_b, cur_m, cur_e = recover(str1.strip(), str2.strip())
-#         for ele in cur_op:
-#             if ele not in res_op:
-#                 res_op[ele] = {}
-#             for k in cur_op[ele]:
-#                 res_op[ele][k] = res_op[ele].get(k, 0) + cur_op[ele][k]
-#         begin += cur_b
-#         middle += cur_m
-#         end += cur_e
-#     return thread_num, res_op, begin, middle, end
-
-
-def recover_thread(para):
-    thread_num, str1, str2 = para
-    res_op = {}
-    cur_op, cur_b, cur_m, cur_e = recover(str1.strip(), str2.strip())
-    for ele in cur_op:
-        if ele not in res_op:
-            res_op[ele] = {}
-        for k in cur_op[ele]:
-            res_op[ele][k] = res_op[ele].get(k, 0) + cur_op[ele][k]
-    return thread_num, res_op, cur_b, cur_m, cur_e
-
-
-def recover_pair(P, truth, cands, nthread):
-    global output, output_str
-    output = np.zeros(nthread)
-    output_str = ['' for _ in range(nthread)]
-    ncand = len(cands)
-    ncand_thread = int(np.floor(ncand * 1. / (nthread - 1)))
-    paras = [(truth[x * ncand_thread: min((x + 1) * ncand_thread, ncand)],
-              cands[x * ncand_thread: min((x + 1) * ncand_thread, ncand)],
-              x)
-             for x in range(nthread)]
-
-    results = P.map(recover_thread, paras)
-    res_op = {}
-    begin = 0
-    middle = 0
-    end = 0
-    for i in range(nthread):
-        thread_num, cur_op, cur_b, cur_m, cur_e = results[i]
-        for ele in cur_op:
-            if ele not in res_op:
-                res_op[ele] = {}
-            for k in cur_op[ele]:
-                res_op[ele][k] = res_op[ele].get(k, 0) + cur_op[ele][k]
-        begin += cur_b
-        middle += cur_m
-        end += cur_e
-    return res_op, begin, middle, end
-#
-# def recover_pair(P, truth, cands, nthread):
-#     global output, output_str
-#     output = np.zeros(nthread)
-#     output_str = ['' for _ in range(nthread)]
-#     ncand = len(cands)
-#     ncand_thread = int(np.floor(ncand * 1. / (nthread - 1)))
-#     paras = [(truth[x * ncand_thread: min((x + 1) * ncand_thread, ncand)],
-#               cands[x * ncand_thread: min((x + 1) * ncand_thread, ncand)],
-#               x)
-#              for x in range(nthread)]
-#
-#     results = P.map(recover_thread, paras)
-#     res_op = {}
-#     begin = 0
-#     middle = 0
-#     end = 0
-#     for i in range(nthread):
-#         thread_num, cur_op, cur_b, cur_m, cur_e = results[i]
-#         for ele in cur_op:
-#             if ele not in res_op:
-#                 res_op[ele] = {}
-#             for k in cur_op[ele]:
-#                 res_op[ele][k] = res_op[ele].get(k, 0) + cur_op[ele][k]
-#         begin += cur_b
-#         middle += cur_m
-#         end += cur_e
-#     return res_op, begin, middle, end
-
-
-# def align_all(P, truth, cands, nthread, flag_char=1):
-#     global output, output_str
-#     output = np.zeros(nthread)
-#     output_str = ['' for i in range(nthread)]
-#     ncand = len(cands)
-#     ncand_thread = int(np.floor(ncand * 1. / (nthread - 1)))
-#     paras = [(truth,
-#               cands[x * ncand_thread: min((x + 1) * ncand_thread, ncand)],
-#               x, flag_char)
-#              for x in range(nthread)]
-#
-#     results = P.map(align_one2many_thread, paras)
-#     # print results
-#     min_dis = float('inf')
-#     min_str = ''
-#     # print len(results)
-#     dict_res = {}
-#     for i in range(nthread):
-#         cur_thread, cur_dis, cur_str = results[i]
-#         if cur_thread not in dict_res:
-#             dict_res[cur_thread] = 1
-#         else:
-#             raise 'Conflicted Threads'
-#         if cur_dis < min_dis:
-#             min_dis = cur_dis
-#             min_str = cur_str
-#     return min_dis, min_str
-
-#
-# def dis_thread(para):
-#     list_str1, list_str2, thread_num, flag_char = para
-#     cur_dis = np.zeros(len(list_str1), dtype=int)
-#     for i in range(len(list_str1)):
-#         str1 = list_str1[i]
-#         str2 = list_str2[i]
-#         if not flag_char:
-#             dis = align(str1.split(), str2.split())
-#         else:
-#             dis = align(str1, str2)
-#         cur_dis[i] = dis
-#     return thread_num, cur_dis
-
-
-# def align_pair(P, truth, cands, nthread, flag_char=1):
-#     global output, output_str
-#     output = np.zeros(nthread)
-#     output_str = ['' for i in range(nthread)]
-#     ncand = len(cands)
-#     ncand_thread = int(np.floor(ncand * 1. / (nthread - 1)))
-#     paras = [(truth[x * ncand_thread: min((x + 1) * ncand_thread, ncand)],
-#               cands[x * ncand_thread: min((x + 1) * ncand_thread, ncand)],
-#               x, flag_char)
-#              for x in range(nthread)]
-#
-#     results = P.map(dis_thread, paras)
-#     res = np.zeros(len(truth), dtype=int)
-#     for i in range(nthread):
-#         thread_num, list_dis = results[i]
-#         res[thread_num * ncand_thread: min((thread_num + 1) * ncand_thread, ncand)] = list_dis
-#     return res
-
-
-# def recover_pair(P, truth, cands, nthread):
-#     global output, output_str
-#     output = np.zeros(nthread)
-#     output_str = ['' for i in range(nthread)]
-#     ncand = len(cands)
-#     ncand_thread = int(np.floor(ncand * 1. / (nthread - 1)))
-#     paras = [(truth[x * ncand_thread: min((x + 1) * ncand_thread, ncand)],
-#               cands[x * ncand_thread: min((x + 1) * ncand_thread, ncand)],
-#               x)
-#              for x in range(nthread)]
-#
-#     results = P.map(recover_thread, paras)
-#     res_op = {}
-#     begin = 0
-#     middle = 0
-#     end = 0
-#     for i in range(nthread):
-#         thread_num, cur_op, cur_b, cur_m, cur_e = results[i]
-#         for ele in cur_op:
-#             if ele not in res_op:
-#                 res_op[ele] = {}
-#             for k in cur_op[ele]:
-#                 res_op[ele][k] = res_op[ele].get(k, 0) + cur_op[ele][k]
-#         begin += cur_b
-#         middle += cur_m
-#         end += cur_e
-#     return res_op, begin, middle, end
-
-
-def test():
-    from multiprocessing import Pool
-    import random
-    import string
-    length = 50
-    list_str = []
-    P = Pool(40)
-    for i in range(10000):
-        rand_str = ''.join(random.choice(
-                            string.ascii_lowercase
-                            + string.ascii_uppercase
-                            + string.digits)
-                       for i in range(length))
-        list_str.append(rand_str)
-    ground = ''.join(random.choice(
-        string.ascii_lowercase
-        + string.ascii_uppercase
-        + string.digits)
-                     for i in range(length))
-    for i in range(10):
-        print align_all(P, ground, list_str, 40)
