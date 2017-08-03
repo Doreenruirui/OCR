@@ -169,7 +169,7 @@ def decode():
             output_sents, output_probs = fix_sent(model, sess, sents)
             output_sents = [ele.replace('_', '-') for ele in output_sents]
             if flag_evl:
-                output_sents = [ele.lower() for ele in output_sents]
+                apply() = [ele.lower() for ele in output_sents]
                 best_dis, best_str = align_one2many(pool, cur_truth, output_sents)
                 top_dis = align(cur_truth, output_sents[0])
                 f_o.write('\t'.join(map(str, [best_dis, top_dis, len(cur_truth)])) + '\n')
