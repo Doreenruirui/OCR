@@ -148,7 +148,7 @@ def decode():
         lines = [ele for ele in f_.readlines()]
     with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.y.txt'), 'r') as f_:
         truths = [ele.strip().lower() for ele in f_.readlines()]
-    f_o = open(pjoin(folder_out, FLAGS.dev + '.ec3.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+    f_o = open(pjoin(folder_out, FLAGS.dev + '.sep' + '.ec.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     pool = Pool(100)
     for line_id in range(FLAGS.start, FLAGS.end):
         line = lines[line_id]

@@ -17,29 +17,20 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import math
 import os
-import random
-import sys
 import time
-import random
-import string
-
 import numpy as np
 from six.moves import xrange
 import tensorflow as tf
-from os.path import join as pjoin
-
-import nlc_model_multiple as nlc_model
-#import nlc_model_global as nlc_model
-import nlc_data
-#import nlc_data_no_filter as nlc_data
-from util import initialize_vocabulary, get_tokenizer
 from multiprocessing import Pool
-import pdb
+from os.path import join as pjoin
+import nlc_model_multiple as nlc_model
+import nlc_data
 from levenshtein import align, align_one2many
+from util import initialize_vocabulary, get_tokenizer
 
 from flag import FLAGS
+
 
 reverse_vocab, vocab = None, None
 
@@ -155,10 +146,10 @@ def decode():
     if flag_evl:
         with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.y.txt'), 'r') as f_:
             truths = [ele.lower().strip() for ele in f_.readlines()]
-        f_o = open(pjoin(folder_out, FLAGS.dev + '.ec1.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+        f_o = open(pjoin(folder_out, FLAGS.dev + '.avg' + '.ec.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
         pool = Pool(100)
     else:
-        f_o = open(pjoin(folder_out, FLAGS.dev + '.om1.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+        f_o = open(pjoin(folder_out, FLAGS.dev + '.avg' + '.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     for line_id in range(FLAGS.start, FLAGS.end):
         line = lines[line_id]
         if flag_evl:

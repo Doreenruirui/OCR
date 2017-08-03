@@ -68,8 +68,8 @@ def decode():
         lines = [ele for ele in f_.readlines()]
     with open(pjoin(data_dir, dev + '.y.txt'), 'r') as f_:
         truths = [ele.strip().lower() for ele in f_.readlines()]
-    f_o = open(pjoin(folder_out, dev + '.' + str(lm_dir) + '.' + 'ec4.txt.' + str(start) + '_' + str(end)), 'w')
-    f_b = open(pjoin(folder_out, dev + '.' + str(lm_dir) + '.' + 'om4.txt.' + str(start) + '_' + str(end)), 'w')
+    f_o = open(pjoin(folder_out, dev + '.' + str(lm_dir) + '.' + 'ec.txt.' + str(start) + '_' + str(end)), 'w')
+    f_b = open(pjoin(folder_out, dev + '.' + str(lm_dir) + '.' + 'o.txt.' + str(start) + '_' + str(end)), 'w')
     pool = Pool(100, initializer=initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir)))
     initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir))
     for line_id in range(start, end):
@@ -82,16 +82,11 @@ def decode():
                 sents = [ele.lower() for ele in sents]
             best_sent, best_prob, probs = rank_sent(pool, sents)
             best_dis = align(cur_truth, best_sent.lower())
-            # cur_dis = align_pair(pool, [cur_truth for _ in sents], [ele.lower() for ele in sents])
-            min_index = np.argmin(probs)
-            min_dis = align(cur_truth, sents[min_index].lower())
-            f_o.write(str(best_dis) + '\t' + str(min_dis) + '\t' + str(len(cur_truth)) + '\n')
+            f_o.write(str(best_dis) + '\t' + str(len(cur_truth)) + '\n')
             f_b.write(best_sent + '\n')
-            # f_o.write(str(best_dis) + '\t' + str(min_dis) + '\t' + '\t'.join([str(dis) + '\t' + str(prob) for dis, prob in zip(cur_dis, probs)]) + '\n')
         else:
-            f_o.write(str(len(cur_truth)) + '\t' + str(len(cur_truth)) + '\t' + str(len(cur_truth))  + '\n')
+            f_o.write(str(len(cur_truth)) + '\t' + str(len(cur_truth)) + '\n')
             f_b.write('' + '\n')
-            # f_o.write(str(len(cur_truth)) + '\t' + str(len(cur_truth)) + '\t' + '\t'.join([str(len(cur_truth)) + '\t1' for _ in sents]) + '\n')
         if line_id % 100 == 0:
             toc = time.time()
             print(toc - tic)
