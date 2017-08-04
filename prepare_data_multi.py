@@ -80,23 +80,14 @@ def bpe_tokenizer(sentence):
 
 
 def get_tokenizer(tokenizer):
-  if tokenizer.lower() == 'bpe':
-    return bpe_tokenizer
-  elif tokenizer.lower() == 'char':
-    return char_tokenizer
-  elif tokenizer.lower() == 'word':
-    return basic_tokenizer
-  else:
-    raise
-  return tokenizer
-
-
-def basic_tokenizer(sentence):
-    """Very basic tokenizer: split the sentence into a list of tokens."""
-    words = []
-    for space_separated_fragment in sentence.strip().split():
-        words.extend(re.split(_WORD_SPLIT, space_separated_fragment))
-    return [w for w in words if w]
+    if tokenizer.lower() == 'bpe':
+        return bpe_tokenizer
+    elif tokenizer.lower() == 'char':
+        return char_tokenizer
+    elif tokenizer.lower() == 'word':
+        return basic_tokenizer
+    else:
+        raise 'Tokenizer undefined'
 
 
 def sentence_to_token_ids(sentence, vocabulary,
@@ -126,15 +117,27 @@ def create_vocabulary(data_dir, max_vocabulary_size,
                 if counter % 100000 == 0:
                     print("  processing line %d" % counter)
                 # Remove non-ASCII characters
-                if flag_ascii:
-                    line = remove_nonascii(line)
-                tokens = tokenizer(line) if tokenizer else basic_tokenizer(line)
-                for w in tokens:
-                    word = re.sub(_DIGIT_RE, b"0", w) if normalize_digits else w
-                    if word in vocab:
-                        vocab[word] += 1
-                    else:
-                        vocab[word] = 1
+                if path.endswith('.y'):
+                    if flag_ascii:
+                        line = remove_nonascii(line)
+                    tokens = tokenizer(line) if tokenizer else basic_tokenizer(line)
+                    for w in tokens:
+                        word = re.sub(_DIGIT_RE, b"0", w) if normalize_digits else w
+                        if word in vocab:
+                            vocab[word] += 1
+                        else:
+                            vocab[word] = 1
+                else:
+                    items = [remove_nonascii(ele) for ele in line.strip('\n').split('\t')]
+                    for item in items:
+                        tokens = tokenizer(item) if tokenizer else basic_tokenizer(item)
+                        for w in tokens:
+                            word = re.sub(_DIGIT_RE, b"0", w) if normalize_digits else w
+                            if word in vocab:
+                                vocab[word] += 1
+                            else:
+                                vocab[word] = 1
+
     vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
     print("Vocabulary size: %d" % len(vocab_list))
     if len(vocab_list) > max_vocabulary_size:
@@ -182,7 +185,7 @@ def data_to_token_ids(data_path, target_path, vocabulary_path,
                     for item in items:
                         token_ids = sentence_to_token_ids(item, vocab, tokenizer,
                                                           normalize_digits)
-                        line_ids.append(token_ids)
+                        line_ids += token_ids
                         line_ids.append(SEN_ID)
                     line_ids = line_ids[:-1]
                     tokens_file.write(" ".join([str(tok) for tok in line_ids]) + "\n")
@@ -193,8 +196,8 @@ def tokenize_data(data_dir, prefix, tokenizer):
     path_x = os.path.join(data_dir,  prefix + ".x.txt")
     path_y = os.path.join(data_dir, prefix + ".y.txt")
     # Create token ids for the training data.
-    y_ids_path = os.path.join(data_dir, prefix + ".ids.y")
     x_ids_path = os.path.join(data_dir, prefix + ".ids.x")
+    y_ids_path = os.path.join(data_dir, prefix + ".ids.y")
     data_to_token_ids(path_x, x_ids_path, vocab_path, tokenizer)
     data_to_token_ids(path_y, y_ids_path, vocab_path, tokenizer)
     return (x_ids_path, y_ids_path)

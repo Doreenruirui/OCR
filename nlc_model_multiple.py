@@ -29,8 +29,17 @@ from tensorflow.python.ops import rnn
 from tensorflow.python.ops import rnn_cell
 from tensorflow.python.ops import variable_scope as vs
 from tensorflow.python.ops.math_ops import tanh
-from model_common import get_optimizer
 import nlc_data
+
+
+def get_optimizer(opt):
+    if opt == "adam":
+        optfn = tf.train.AdamOptimizer
+    elif opt == "sgd":
+        optfn = tf.train.GradientDescentOptimizer
+    else:
+        assert(False)
+    return optfn
 
 
 class GRUCellAttn(rnn_cell.GRUCell):

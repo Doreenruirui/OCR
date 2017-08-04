@@ -41,12 +41,14 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
             list_top.append(cur_str)
         list_beam.append(cur_str)
     list_dec.append(list_beam)
+    if end == -1:
+        end = len(list_dec)
     with open(pjoin(folder_data, prefix + '.y.txt'), 'r') as f_:
         list_y = [ele.strip().lower() for ele in f_.readlines()][start:end]
     if flag_char:
-        len_y = [len(y) for y in list_y]
+        len_y = [len(y) for y in list_y][start:end]
     else:
-        len_y = [len(y.split()) for y in list_y]
+        len_y = [len(y.split()) for y in list_y][start:end]
     print len(len_y)
     nthread = 100
     pool = Pool(nthread)
@@ -55,14 +57,14 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
     dis = np.asarray(zip(dis_by, dis_ty, len_y))
     if end == -1:
         if flag_char:
-            outfile = pjoin(folder_data, out_folder, prefix + '.ec' + group + '.txt')
+            outfile = pjoin(folder_data, out_folder, prefix + '.ec.txt')
         else:
-            outfile = pjoin(folder_data, out_folder, prefix + '.ew' + group + '.txt')
+            outfile = pjoin(folder_data, out_folder, prefix + '.ew.txt')
     else:
         if flag_char:
-            outfile = pjoin(folder_data, out_folder, prefix + '.ec' + group + '.txt.' + str(start) + '_' + str(end))
+            outfile = pjoin(folder_data, out_folder, prefix + '.ec.txt.' + str(start) + '_' + str(end))
         else:
-            outfile = pjoin(folder_data, out_folder, prefix + '.ew' + group + '.txt.' + str(start) + '_' + str(end))
+            outfile = pjoin(folder_data, out_folder, prefix + '.ew.txt.' + str(start) + '_' + str(end))
     np.savetxt(outfile, dis, fmt='%d')
 
 
@@ -107,10 +109,10 @@ def evaluate_man_wit(folder_name, prefix='dev'):
             line_id = new_line_id
 
 
-if False:
+if True:
     cur_folder = sys.argv[1]
-    cur_prefix = sys.argv[2]
-    cur_out = sys.argv[3]
+    cur_out = sys.argv[2]
+    cur_prefix = sys.argv[3]
     beam = int(sys.argv[4])
     start_line = int(sys.argv[5])
     end_line = int(sys.argv[6])
