@@ -28,12 +28,14 @@ _PAD = b"<pad>"
 _SOS = b"<sos>"
 _EOS = b"<eos>"
 _UNK = b"<unk>"
-_START_VOCAB = [_PAD, _SOS, _EOS, _UNK]
+_SEN = b"<s>"
+_START_VOCAB = [_PAD, _SOS, _EOS, _UNK, _SEN]
 
 PAD_ID = 0
 SOS_ID = 1
 EOS_ID = 2
 UNK_ID = 3
+SEN_ID = 4
 
 
 _WORD_SPLIT = re.compile(b"([.,!?\"':;)(])")
