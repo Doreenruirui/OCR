@@ -21,7 +21,7 @@ import time
 import numpy as np
 from os.path import join as pjoin
 from multiprocessing import Pool
-from process_lm import score_sent, initialize_score
+from util_lm import score_sent, initialize_score
 from levenshtein import align_pair, align
 
 

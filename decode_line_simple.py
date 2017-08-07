@@ -144,19 +144,19 @@ def decode():
     model = create_model(sess, vocab_size, False)
     tic = time.time()
     with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.x.txt'), 'r') as f_:
-        lines = [ele.strip() for ele in f_.readlines()]
+        lines = [ele.strip('\n') for ele in f_.readlines()]
     f_o = open(pjoin(folder_out, FLAGS.dev + '.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     for line_id in range(FLAGS.start, FLAGS.end):
-        line = lines[line_id]
+        line = lines[line_id].split('\t')[0]
         sent = line.strip()
         if len(sent) == 0:
             f_o.write('\n' * 100)
             continue
-        #output_sents, output_probs = fix_sent(model, sess, sent)
-        output_sents, output_probs = fix_sent(model, sess, sent.replace('-', '_'))
+        output_sents, output_probs = fix_sent(model, sess, sent)
+        #output_sents, output_probs = fix_sent(model, sess, sent.replace('-', '_'))
         for i in range(len(output_sents)):
-            #sent = output_sents[i]
-            sent = output_sents[i].replace('_', '-')
+            sent = output_sents[i]
+            #sent = output_sents[i].replace('_', '-')
             prob = output_probs[i]
             f_o.write(sent + '\n')
             # f_o.write(sent + '\t' + str(prob) + '\n')

@@ -40,6 +40,8 @@ _WORD_SPLIT = re.compile(b"([.,!?\"':;)(])")
 _DIGIT_RE = re.compile(br"\d")
 
 
+
+
 def tokenize(string):
   return [int(s) for s in string.split()]
 

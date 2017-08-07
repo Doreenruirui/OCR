@@ -164,10 +164,11 @@ def decode():
         if flag_evl:
             cur_truth = truths[line_id]
         sents = [ele for ele in line.strip('\n').split('\t')][:100]
-        sents = [ele.replace('-', '_') for ele in sents if len(ele.strip()) > 0]
+        #sents = [ele.replace('-', '_') for ele in sents if len(ele.strip()) > 0]
+        sents = [ele for ele in sents if len(ele.strip()) > 0]
         if len(sents) > 0:
             output_sents, output_probs = fix_sent(model, sess, sents)
-            output_sents = [ele.replace('_', '-') for ele in output_sents]
+            #output_sents = [ele.replace('_', '-') for ele in output_sents]
             if flag_evl:
                 output_sents = [ele.lower() for ele in output_sents]
                 best_dis, best_str = align_one2many(pool, cur_truth, output_sents)

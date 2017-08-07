@@ -33,7 +33,7 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
     list_top = []
     for line in file(file_name):
         line_id += 1
-        cur_str = line.split('\t')[0].strip().lower()
+        cur_str = line.strip().lower()
         if line_id % beam_size == 1:
             if len(list_beam) == beam_size:
                 list_dec.append(list_beam)
@@ -46,9 +46,9 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
     with open(pjoin(folder_data, prefix + '.y.txt'), 'r') as f_:
         list_y = [ele.strip().lower() for ele in f_.readlines()][start:end]
     if flag_char:
-        len_y = [len(y) for y in list_y][start:end]
+        len_y = [len(y) for y in list_y]
     else:
-        len_y = [len(y.split()) for y in list_y][start:end]
+        len_y = [len(y.split()) for y in list_y]
     print len(len_y)
     nthread = 100
     pool = Pool(nthread)
@@ -68,11 +68,11 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
     np.savetxt(outfile, dis, fmt='%d')
 
 
-def evaluate_man(folder_name, prefix='dev'):
+def evaluate_man(folder_name, prefix='dev', start=0, end=-1):
     global folder_data
     cur_folder_data = pjoin(folder_data, folder_name)
     with open(pjoin(cur_folder_data, prefix + '.x.txt'), 'r') as f_:
-        list_x = [ele.lower().strip('\n').split('\t')[0].strip() for ele in f_.readlines()]
+        list_x = [ele.lower().strip() for ele in f_.readlines()]
     with open(pjoin(cur_folder_data, prefix + '.y.txt'), 'r') as f_:
         list_y = [ele.strip().lower() for ele in f_.readlines()]
     len_yc = [len(y) for y in list_y]
@@ -120,5 +120,7 @@ if True:
 else:
     cur_folder = sys.argv[1]
     cur_prefix = sys.argv[2]
-    evaluate_man(cur_folder, cur_prefix)
-    evaluate_man_wit(cur_folder, cur_prefix)
+    start_line = int(sys.argv[3])
+    end_line = int(sys.argv[4])
+    evaluate_man(cur_folder, cur_prefix, start_line, end_line)
+    #evaluate_man_wit(cur_folder, cur_prefix)
