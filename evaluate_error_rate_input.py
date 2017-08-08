@@ -32,7 +32,7 @@ def error_rate(dis_xy, len_y):
     return micro_error, macro_error
 
 
-def evaluate_error(file_name, col):
+def evaluate_error(file_name, ocr_name, col):
     global folder_data
     group = [0, 0.1, 0.2, 0.3, 0.4, 0.5, float('inf')]
     dict_error = {}

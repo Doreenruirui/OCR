@@ -30,6 +30,7 @@ data_dir = ''
 out_dir = ''
 lm_dir = ''
 dev = ''
+lm_name = ''
 start = 0
 end = -1
 
@@ -39,10 +40,9 @@ def remove_nonascii(text):
 
 
 def rank_sent(pool, sents):
-    res1 = score_sent([0, remove_nonascii(sents[0].replace('_', '-'))])
-    res2 = score_sent([0, remove_nonascii(sents[1].replace('_', '-'))])
-    new_sents = [remove_nonascii(ele.replace('_', '-')) for ele in sents]
-    #res2 = score_sent([sents[1].replace('-', '_')])
+    # res1 = score_sent([0, remove_nonascii(sents[0].replace('_', '-'))])
+    # res2 = score_sent([0, remove_nonascii(sents[1].replace('_', '-'))])
+    new_sents = [remove_nonascii(ele) for ele in sents]
     #print(res1, res2)
     probs = np.ones(len(sents)) * -1
     results = pool.map(score_sent, zip(np.arange(len(sents)), new_sents))
@@ -58,7 +58,7 @@ def rank_sent(pool, sents):
 
 
 def decode():
-    global folder_data, data_dir, out_dir, lm_dir, dev, start, end
+    global folder_data, data_dir, out_dir, lm_dir, dev, start, end, lm_name
     data_dir = pjoin(folder_data, data_dir)
     folder_out = pjoin(data_dir, out_dir)
     if not os.path.exists(folder_out):
@@ -68,8 +68,8 @@ def decode():
         lines = [ele for ele in f_.readlines()]
     with open(pjoin(data_dir, dev + '.y.txt'), 'r') as f_:
         truths = [ele.strip().lower() for ele in f_.readlines()]
-    f_o = open(pjoin(folder_out, dev + '.' + str(lm_dir) + '.' + 'ec.txt.' + str(start) + '_' + str(end)), 'w')
-    f_b = open(pjoin(folder_out, dev + '.' + str(lm_dir) + '.' + 'o.txt.' + str(start) + '_' + str(end)), 'w')
+    f_o = open(pjoin(folder_out, dev + '.' + str(lm_name) + '.' + 'ec.txt.' + str(start) + '_' + str(end)), 'w')
+    f_b = open(pjoin(folder_out, dev + '.' + str(lm_name) + '.' + 'o.txt.' + str(start) + '_' + str(end)), 'w')
     pool = Pool(100, initializer=initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir)))
     initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir))
     for line_id in range(start, end):
@@ -96,14 +96,15 @@ def decode():
 
 
 def main():
-    global folder_data, data_dir, out_dir, lm_dir, dev, start, end
+    global folder_data, data_dir, out_dir, lm_dir, dev, start, end, lm_name
     folder_data = sys.argv[1]
     data_dir = sys.argv[2]
     out_dir = sys.argv[3]
     lm_dir = sys.argv[4]
-    dev = sys.argv[5]
-    start = int(sys.argv[6])
-    end = int(sys.argv[7])
+    lm_name = sys.argv[5]
+    dev = sys.argv[6]
+    start = int(sys.argv[7])
+    end = int(sys.argv[8])
     decode()
 
 

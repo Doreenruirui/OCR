@@ -68,7 +68,7 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
     np.savetxt(outfile, dis, fmt='%d')
 
 
-def evaluate_man(folder_name, prefix='dev', start=0, end=-1):
+def evaluate_man(folder_name, prefix='dev'):
     global folder_data
     cur_folder_data = pjoin(folder_data, folder_name)
     with open(pjoin(cur_folder_data, prefix + '.x.txt'), 'r') as f_:
@@ -120,7 +120,5 @@ if True:
 else:
     cur_folder = sys.argv[1]
     cur_prefix = sys.argv[2]
-    start_line = int(sys.argv[3])
-    end_line = int(sys.argv[4])
-    evaluate_man(cur_folder, cur_prefix, start_line, end_line)
+    evaluate_man(cur_folder, cur_prefix)
     #evaluate_man_wit(cur_folder, cur_prefix)
