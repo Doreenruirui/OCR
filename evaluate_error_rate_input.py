@@ -32,23 +32,30 @@ def error_rate(dis_xy, len_y):
     return micro_error, macro_error
 
 
-def evaluate_error(file_name, ocr_name, col):
+def evaluate_error(cur_folder, file_ec, file_ocr, col):
     global folder_data
+    folder_data = pjoin(folder_data, cur_folder)
     group = [0, 0.1, 0.2, 0.3, 0.4, 0.5, float('inf')]
     dict_error = {}
     dict_origin = {}
-    for ele in group[1:]:
+    for ele in group:
         dict_error[ele] = []
         dict_origin[ele] = []
-    for line in file(file_name):
+    dis_ec = np.loadtxt(pjoin(folder_data, file_ec))
+    line_id = 0
+    for line in file(pjoin(folder_data, file_ocr)):
         items = map(float, line.strip('\n').split(' '))
-        cur_error = items[-2] / items[-1]
+        cur_error = items[0] / items[-1]
+        if cur_error == 0:
+            dict_error[0].append(dis_ec[line_id, col]/ dis_ec[line_id, -1])
+            dict_origin[0].append(0)
         for i in range(1, 7):
-            if group[i - 1] <= cur_error < group[i]:
-                dict_error[group[i]].append(items[col]/items[-1])
-                dict_origin[group[i]].append(items[-2]/items[-1])
+            if group[i - 1] < cur_error <= group[i]:
+                dict_error[group[i]].append(dis_ec[line_id, col]/ dis_ec[line_id, -1])
+                dict_origin[group[i]].append(cur_error)
                 break
-    for ele in dict_error:
+        line_id += 1
+    for ele in group:
         print ele, np.mean(dict_error[ele]), np.mean(dict_origin[ele])
 
-evaluate_error(sys.argv[1], int(sys.argv[2]))
+evaluate_error(sys.argv[1],sys.argv[2], sys.argv[3], int(sys.argv[4]))

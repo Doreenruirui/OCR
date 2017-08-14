@@ -21,6 +21,16 @@ def remove_nonascii(text):
     return re.sub(r'[^\x00-\x7F]', ' ', text)
 
 
+def get_string_to_score(sent):
+    sent = remove_nonascii(sent)
+    items = []
+    for ele in sent:
+        if len(ele.strip()) == 0:
+            items.append('<space>')
+        else:
+            items.append(ele)
+    return ' '.join(items)
+
 def score_sent(paras):
     global lm, rm_voc
     if len(paras) == 1:
@@ -49,7 +59,10 @@ def initialize_score(folder_voc, folder_lm):
     file_voc = pjoin(folder_voc, 'ascii.syms')
     tbl = fst.SymbolTable.read_text(file_voc)
     get_dict()
-    list_voc = get_voc_lm(folder_lm)
+    list_voc = []
+    for line in file(pjoin(folder_lm, 'voc')):
+        list_voc.append(line.strip('\n'))
+    #list_voc = get_voc_lm(folder_lm)
     rm_voc = []
     for char in dict_char2id:
         if char not in list_voc:

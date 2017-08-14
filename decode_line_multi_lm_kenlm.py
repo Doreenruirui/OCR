@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-
+import kenlm
 import re
 import os
 import sys
@@ -21,7 +21,7 @@ import time
 import numpy as np
 from os.path import join as pjoin
 from multiprocessing import Pool
-from util_lm import score_sent, initialize_score
+from util_lm import get_string_to_score
 from levenshtein import align_pair, align
 
 
@@ -33,19 +33,29 @@ dev = ''
 lm_name = ''
 start = 0
 end = -1
+lm = None
 
+
+def initialize():
+    global lm, folder_data, lm_dir
+    lm = kenlm.LanguageModel(pjoin(folder_data, 'lm/char', lm_dir, 'train.arpa'))
+
+def score_sent(paras):
+    global lm
+    thread_no, sent = paras
+    sent = get_string_to_score(sent)
+    return thread_no, lm.score(sent)
 
 def remove_nonascii(text):
     return re.sub(r'[^\x00-\x7F]', ' ', text)
 
-
 def rank_sent(pool, sents):
-    res1 = score_sent([0, remove_nonascii(sents[0])])
-    res2 = score_sent([0, remove_nonascii(sents[1])])
-    new_sents = [remove_nonascii(ele) for ele in sents]
+    # res1 = score_sent([0, remove_nonascii(sents[0].replace('_', '-'))])
+    # res2 = score_sent([0, remove_nonascii(sents[1].replace('_', '-'))])
+    # new_sents = [remove_nonascii(ele) for ele in sents]
     #print(res1, res2)
     probs = np.ones(len(sents)) * -1
-    results = pool.map(score_sent, zip(np.arange(len(sents)), new_sents))
+    results = pool.map(score_sent, zip(np.arange(len(sents)), sents))
     max_str = ''
     max_prob = -1
     for tid, score in results:
@@ -58,7 +68,7 @@ def rank_sent(pool, sents):
 
 
 def decode():
-    global folder_data, data_dir, out_dir, lm_dir, dev, start, end, lm_name
+    global folder_data, data_dir, out_dir, lm_dir, dev, start, end, lm_name, lm
     data_dir = pjoin(folder_data, data_dir)
     folder_out = pjoin(data_dir, out_dir)
     if not os.path.exists(folder_out):
@@ -68,10 +78,9 @@ def decode():
         lines = [ele for ele in f_.readlines()]
     with open(pjoin(data_dir, dev + '.y.txt'), 'r') as f_:
         truths = [ele.strip().lower() for ele in f_.readlines()]
-    f_o = open(pjoin(folder_out, dev + '.' + str(lm_name) + '.' + 'ec.txt.' + str(start) + '_' + str(end)), 'w')
-    f_b = open(pjoin(folder_out, dev + '.' + str(lm_name) + '.' + 'o.txt.' + str(start) + '_' + str(end)), 'w')
-    pool = Pool(100, initializer=initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir)))
-    initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir))
+    f_o = open(pjoin(folder_out, dev + '.' + str(lm_name) + '.kenlm.' + 'ec.txt.' + str(start) + '_' + str(end)), 'w')
+    f_b = open(pjoin(folder_out, dev + '.' + str(lm_name) + '.kenlm.' + 'o.txt.' + str(start) + '_' + str(end)), 'w')
+    pool = Pool(100, initializer=initialize())
     for line_id in range(start, end):
         line = lines[line_id]
         cur_truth = truths[line_id]

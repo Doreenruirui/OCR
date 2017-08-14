@@ -4,6 +4,9 @@ import sys
 import plot_curve
 
 
+folder_data = '/scratch/dong.r/Dataset/OCR/'
+
+
 def error_rate(dis_xy, len_y):
     micro_error = np.mean(dis_xy/len_y)
     macro_error = np.sum(dis_xy) / np.sum(len_y)
@@ -94,12 +97,13 @@ def evaluate_plot(folder_name, g1_file, g2_file, g3_file, g4_file, ocr_file):
     dis2 = np.loadtxt(pjoin(cur_folder_data, g2_file), dtype=float)
     dis3 = np.loadtxt(pjoin(cur_folder_data, g3_file), dtype=float)
     dis4 = []
-    for line in file(pjoin(cur_folder_data, g4_file)):
-        items = line.strip('\n').split('\t')
-        dis4.append(float(items[0]))
+    with open(pjoin(cur_folder_data, ocr_file), 'r') as f_:
+        for line in f_.readlines():
+            items = line.strip('\n').split('\t')
+            dis4.append(float(items[0]))
     dis4 =  np.asarray(dis4)
     num_input = []
-    with open(pjoin(cur_folder_data, 'g4_file'), 'r') as f_:
+    with open(pjoin(cur_folder_data, g4_file), 'r') as f_:
         lines = f_.readlines()
         for line in lines:
             items = line.strip('\n').split('\t')
@@ -158,32 +162,28 @@ def evaluate_plot(folder_name, g1_file, g2_file, g3_file, g4_file, ocr_file):
 
 
 
-def evaluate_plot_2(folder_name, g1_file, g2_file, g3_file, g4_file, ocr_file):
+def evaluate_plot_2(folder_name, g1_file, g2_file, g3_file, g4_file, g5_file, ocr_file):
     global folder_data
     cur_folder_data = pjoin(folder_data, folder_name)
-    dis0 = np.loadtxt(pjoin(cur_folder_data, ocr_file), dtype=float)[:175000,:]
-    dis1 = np.loadtxt(pjoin(cur_folder_data, g1_file), dtype=float)
-    dis2 = np.loadtxt(pjoin(cur_folder_data, g2_file), dtype=float)
-    dis3 = []
-    for line in file(pjoin(cur_folder_data, g3_file)):
-        items = line.strip('\n').split('\t')
-        dis3.append([float(items[0]), float(items[1]), float(items[2]), float(items[-1])])
-    dis3 = np.asarray(dis3)
-    dis4 = []
-    for line in file(pjoin(cur_folder_data, g4_file)):
-        items = line.strip('\n').split('\t')
-        dis4.append(float(items[0]))
-    dis4 =  np.asarray(dis4)
+    dis0 = []
+    with open(pjoin(cur_folder_data, ocr_file), 'r') as f_:
+        for line in f_.readlines():
+            items = line.strip('\n').split('\t')
+            dis0.append([float(items[0]), float(items[-1])])
+    dis0 = np.asarray(dis0)
+    dis1 = np.loadtxt(pjoin(cur_folder_data, g1_file), dtype=float)  #Average
+    dis2 = np.loadtxt(pjoin(cur_folder_data, g2_file), dtype=float)  #Soft
+    dis3 = np.loadtxt(pjoin(cur_folder_data, g3_file), dtype=float)  #Single
+    dis4 = np.loadtxt(pjoin(cur_folder_data, g4_file), dtype=float)  #LM Rank
+    dis5 = np.loadtxt(pjoin(cur_folder_data, g5_file), dtype=float)  #LM
     num_input = []
-    with open(pjoin(cur_folder_data, 'g4_file'), 'r') as f_:
+    with open(pjoin(cur_folder_data, ocr_file), 'r') as f_:
         lines = f_.readlines()
         for line in lines:
             items = line.strip('\n').split('\t')
-            num_input.append((len(items) - 1) * 1. /2)
+            num_input.append((len(items) - 1))
     num_input = np.asarray(num_input)
-    print len([i for i in num_input if i == 1])
-    dis3 = np.asarray(dis3)
-    dict_id2name = {0:'ocr', 1:'single_top', 2:'single_best', 3:'soft_top', 4:'soft_best', 5:'avg_top', 6:'avg_best'}
+    dict_id2name = {0:'ocr', 1:'single_top', 2:'single_best', 3:'soft_top', 4:'soft_best', 5:'avg_top', 6:'avg_best', 7: 'lm_top', 8: 'lm_best', 9: 'lm_rank'}
     dict_id2error = {}
     dict_id2error[6]  = dis1[:, 0] / dis1[:, -1]
     dict_id2error[5] = dis1[:, 1] / dis1[:, -1]
@@ -192,6 +192,9 @@ def evaluate_plot_2(folder_name, g1_file, g2_file, g3_file, g4_file, ocr_file):
     dict_id2error[1] = dis3[:, 1] / dis3[:, -1]
     dict_id2error[2] = dis3[:, 2] / dis3[:, -1]
     dict_id2error[0] = dis0[:, 0] / dis0[:, -1]
+    dict_id2error[8] = dis5[:, 0] / dis5[:, -1]
+    dict_id2error[7] = dis5[:, 1] / dis5[:, -1]
+    dict_id2error[9] = dis4[:, 0] / dis4[:, -1]
     group = [i for i in range(1, 101)]
     dict_id2error_group = {}
     for item in dict_id2error:
@@ -229,4 +232,10 @@ def evaluate_plot_2(folder_name, g1_file, g2_file, g3_file, g4_file, ocr_file):
     plot_curve.plot(x, y, xlabel,ylabel, xlim, ylim, lenlabel, title, fig, file)
 
 # evaluate_all()
-# evaluate_plot_2('richmond/0/0/50/train_new', 'group.ec1.txt', 'group.ec2.txt', 'group.ec3.txt','group.ec4.txt', 'group.ec.txt')
+evaluate_plot_2('multi/0/0/50/test',
+                'man_wit.test.avg.ec.txt',
+                'man_wit.test.soft.ec.txt',
+                'man_wit.test.single.ec.txt',
+                'man_wit.test.richmond.dec.ec.txt',
+                'man_wit.test.richmond.ec.txt',
+                'man_wit.test.ec.txt')
