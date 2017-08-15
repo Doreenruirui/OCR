@@ -41,7 +41,7 @@ machine=$3
 jobname=$4
 folder_data='/scratch/dong.r/Dataset/OCR/'$folder_name
 file_symbol='/scratch/dong.r/Dataset/OCR/voc/ascii.syms'
-folder_script='/home/dong.r/OCR/script/lm_nyt_low'
+folder_script='/home/dong.r/OCR/script/lm_richmond_low'
 file_script=$folder_script'/run.sbatch.'
 nline=$(cat $folder_data/train.text | wc -l)
 nfile=$(ceildiv $nline $size)
@@ -52,7 +52,7 @@ do
     cur_file=$file_script$i
     j=$(($i-1))
     k=$(($j*$size))
-    cur_cmd='sh /home/dong.r/OCR/jobs/job_lm_char_line.sh '$folder_data' '$i' '$k' '$size' '$nline
+    cur_cmd='sh /home/dong.r/OCR/jobs/job_lm_char_line_low.sh '$folder_data' '$i' '$k' '$size' '$nline
     $(rm_file $cur_file)
     $(writejob $cur_file $jobname $i $folder_script $machine)
     #echo 'source ~/.bashrc' >> $cur_file

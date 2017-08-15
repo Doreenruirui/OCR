@@ -1,4 +1,4 @@
-for i in $(seq 1 $1);
+for i in $(seq $1 $2);
 do 
-    sbatch script/$2/run.sbatch.$i
+    sbatch /home/dong.r/OCR/script/$3/run.sbatch.$i
 done

@@ -1,14 +1,14 @@
 from os.path import join as pjoin
 
 folder_data = '/scratch/dong.r/Dataset/OCR/lm/char'
-#folder_lm = 'richmond_0_0'
-folder_lm = 'nyt'
+#folder_lm = 'richmond_0_0_low'
+folder_lm = 'nyt_low'
 
 
 def prepare_data():
      with open(pjoin(folder_data, folder_lm, 'train.text.char'), 'w') as f_:
         for line in file(pjoin(folder_data, folder_lm, 'train.text')):
-            line = line.strip('\n')
+            line = line.strip().lower()
             items = []
             for ele in line:
                 if len(ele.strip()) == 0:

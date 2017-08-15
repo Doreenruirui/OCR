@@ -19,7 +19,7 @@ do
     j=$(($i-1))
     cur_start=$(($j*$size))
     cur_end=$(($i * $size))
-    cur_cmd='sh /home/dong.r/OCR/jobs/run_dec_group.sh '$folder_name' '$folder_train' '$folder_out' '$dev' '$cur_start' '$cur_end
+    cur_cmd='sh /home/dong.r/OCR/jobs/run_dec_group_weight.sh '$folder_name' '$folder_train' '$folder_out' '$dev' '$cur_start' '$cur_end' richmond_0_0 0.005' 
     $(rm_file $cur_file)
     $(writejob $cur_file $jobname $i $folder_script $machine)
     echo ''$cur_cmd >> $cur_file

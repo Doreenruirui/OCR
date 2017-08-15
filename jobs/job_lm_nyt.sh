@@ -5,7 +5,7 @@ jobname=$3
 folder_input='/scratch/dong.r/Dataset/unprocessed/NYT'
 folder_data='/scratch/dong.r/Dataset/OCR/'$folder_name
 file_voc='/scratch/dong.r/Dataset/OCR/voc/ascii.syms'
-folder_script='/home/dong.r/OCR/script/lm_nyt'
+folder_script='/home/dong.r/OCR/script/lm_nyt_upper'
 file_script=$folder_script'/run.sbatch.'
 nfile=$(cat $folder_input'/out_file_non_empty' | wc -l)
 echo $nfile

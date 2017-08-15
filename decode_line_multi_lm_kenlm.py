@@ -57,9 +57,10 @@ def rank_sent(pool, sents):
     probs = np.ones(len(sents)) * -1
     results = pool.map(score_sent, zip(np.arange(len(sents)), sents))
     max_str = ''
-    max_prob = -1
+    max_prob = float('-inf')
     for tid, score in results:
-        cur_prob = np.power(10, -score)
+        cur_prob = score
+        #cur_prob = np.power(10, -score)
         probs[tid] = cur_prob
         if cur_prob > max_prob:
             max_prob = cur_prob

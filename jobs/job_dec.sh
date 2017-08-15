@@ -1,4 +1,4 @@
-source ./bash_function.sh           
+source /home/dong.r/OCR/jobs/bash_function.sh           
 folder_name=$1
 folder_train=$2
 folder_out=$3
@@ -19,7 +19,7 @@ do
     j=$(($i-1))
     cur_start=$(($j*$size))
     cur_end=$(($i * $size))
-    cur_cmd='./run_dec_simple.sh '$folder_name' '$folder_train' '$folder_out' '$dev' '$cur_start' '$cur_end
+    cur_cmd='sh /home/dong.r/OCR/jobs/run_dec_simple.sh '$folder_name' '$folder_train' '$folder_out' '$dev' '$cur_start' '$cur_end' 3 400'
     $(rm_file $cur_file)
     $(writejob $cur_file $jobname $i $folder_script $machine)
     echo ''$cur_cmd >> $cur_file

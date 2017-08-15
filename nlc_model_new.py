@@ -23,12 +23,17 @@ import random
 import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
+from tensorflow.python.framework import ops
 from tensorflow.python.framework import dtypes
+from tensorflow.python.ops import array_ops
+from tensorflow.python.ops import control_flow_ops
 from tensorflow.python.ops import embedding_ops
 from tensorflow.python.ops import rnn
 from tensorflow.python.ops import rnn_cell
 from tensorflow.python.ops import variable_scope as vs
+from tensorflow.python.ops.math_ops import sigmoid
 from tensorflow.python.ops.math_ops import tanh
+
 import nlc_data
 
 
@@ -43,18 +48,13 @@ def get_optimizer(opt):
 
 
 class GRUCellAttn(rnn_cell.GRUCell):
-    def __init__(self, num_units, w, encoder_output, scope=None):
+    def __init__(self, num_units, encoder_output, scope=None):
         self.hs = encoder_output
-        self.w = w
         with vs.variable_scope(scope or type(self).__name__):
             with vs.variable_scope("Attn1"):
                 hs2d = tf.reshape(self.hs, [-1, num_units])
                 phi_hs2d = tanh(rnn_cell._linear(hs2d, num_units, True, 1.0))
                 self.phi_hs = tf.reshape(phi_hs2d, tf.shape(self.hs))
-        # self.hs = tf.transpose(self.hs, [1, 0, 2])
-        # shape0 = tf.shape(self.hs)[0]
-        # shape1 = tf.shape(self.hs)[1]
-        # self.hs = tf.reshape(self.hs, [shape0, shape1, 1, -1])
         super(GRUCellAttn, self).__init__(num_units)
 
     def __call__(self, inputs, state, scope=None):
@@ -62,16 +62,13 @@ class GRUCellAttn(rnn_cell.GRUCell):
         with vs.variable_scope(scope or type(self).__name__):
             with vs.variable_scope("Attn2"):
                 gamma_h = tanh(rnn_cell._linear(gru_out, self._num_units, True, 1.0))
-            weights = tf.reduce_sum(self.phi_hs * gamma_h, reduction_indices=3, keep_dims=True)
-            weights = tf.exp(weights - tf.reduce_max(weights, reduction_indices=1, keep_dims=True))
-            weights = weights / (1e-6 + tf.reduce_sum(weights, reduction_indices=1, keep_dims=True))
-            context = tf.reduce_sum(self.hs * weights, reduction_indices=1)
-            context = tf.reshape(tf.reduce_sum(context * self.w, reduction_indices=0), [-1, self._num_units])
-            # context = tf.reshape(tf.reduce_mean(context, reduction_indices=0), [-1, self._num_units])
-            # res = tf.concat(0, [context, gru_out])
+            weights = tf.reduce_sum(self.phi_hs * gamma_h, reduction_indices=2, keep_dims=True)
+            weights = tf.exp(weights - tf.reduce_max(weights, reduction_indices=0, keep_dims=True))
+            weights = weights / (1e-6 + tf.reduce_sum(weights, reduction_indices=0, keep_dims=True))
+            context = tf.reduce_sum(self.hs * weights, reduction_indices=0)
             with vs.variable_scope("AttnConcat"):
                 out = tf.nn.relu(rnn_cell._linear([context, gru_out], self._num_units, True, 1.0))
-            # self.attn_map = tf.squeeze(tf.slice(weights, [0, 0, 0], [-1, -1, 1]))
+            self.attn_map = tf.squeeze(tf.slice(weights, [0, 0, 0], [-1, -1, 1]))
             return (out, out)
 
 
@@ -120,14 +117,12 @@ class NLCModel(object):
         self.saver = tf.train.Saver(tf.all_variables(), max_to_keep=0)
 
 
-
     def setup_embeddings(self):
         with vs.variable_scope("embeddings"):
             self.L_enc = tf.get_variable("L_enc", [self.vocab_size, self.size])
             self.L_dec = tf.get_variable("L_dec", [self.vocab_size, self.size])
             self.encoder_inputs = embedding_ops.embedding_lookup(self.L_enc, self.source_tokens)
             self.decoder_inputs = embedding_ops.embedding_lookup(self.L_dec, self.target_tokens)
-
 
 
     def setup_encoder(self):
@@ -144,32 +139,30 @@ class NLCModel(object):
                     inp = self.dropout(dropin)
             self.encoder_output = out
 
-    def setup_decoder(self):
-        self.encoder_output_feed = tf.placeholder(dtype=tf.float32, shape=[None, None, 1,  None])
-        self.weight = tf.placeholder(dtype=tf.float32, shape=[None, None, None])
 
+    def setup_decoder(self):
         if self.num_layers > 1:
             self.decoder_cell = rnn_cell.GRUCell(self.size)
-        self.attn_cell = GRUCellAttn(self.size, self.weight, self.encoder_output_feed, scope="DecoderAttnCell")
+        self.attn_cell = GRUCellAttn(self.size, self.encoder_output, scope="DecoderAttnCell")
+
 
         with vs.variable_scope("Decoder"):
-            inp = tf.gather(self.decoder_inputs, 0)
+            inp = self.decoder_inputs
             for i in xrange(self.num_layers - 1):
                 with vs.variable_scope("DecoderCell%d" % i) as scope:
-                    out, _ = self.decoder_cell(inp, self.decoder_state_input[i])
-                    # out, state_output = rnn.dynamic_rnn(self.decoder_cell, inp, time_major=True,
-                    #                                     dtype=dtypes.float32, sequence_length=self.target_length,
-                    #                                     scope=scope, initial_state=self.decoder_state_input[i])
+                    out, state_output = rnn.dynamic_rnn(self.decoder_cell, inp, time_major=True,
+                                                        dtype=dtypes.float32, sequence_length=self.target_length,
+                                                        scope=scope, initial_state=self.decoder_state_input[i])
                     inp = self.dropout(out)
-                    # self.decoder_state_output.append(state_output)
+                    self.decoder_state_output.append(state_output)
 
             with vs.variable_scope("DecoderAttnCell") as scope:
-                out, _ = self.attn_cell(inp, self.decoder_state_input[i + 1])
-                # out, state_output = rnn.dynamic_rnn(self.attn_cell, inp, time_major=True,
-                #                                     dtype=dtypes.float32, sequence_length=self.target_length,
-                #                                     scope=scope, initial_state=self.decoder_state_input[i+1])
+                out, state_output = rnn.dynamic_rnn(self.attn_cell, inp, time_major=True,
+                                                    dtype=dtypes.float32, sequence_length=self.target_length,
+                                                    scope=scope, initial_state=self.decoder_state_input[i+1])
                 self.decoder_output = self.dropout(out)
-                # self.decoder_state_output.append(state_output)
+                self.decoder_state_output.append(state_output)
+
 
     def decoder_graph(self, decoder_inputs, decoder_state_input):
         decoder_output, decoder_state_output = None, []
@@ -177,15 +170,16 @@ class NLCModel(object):
 
         with vs.variable_scope("Decoder", reuse=True):
             for i in xrange(self.num_layers - 1):
-                with vs.variable_scope("DecoderCell%d" % i):
+                with vs.variable_scope("DecoderCell%d" % i) as scope:
                     inp, state_output = self.decoder_cell(inp, decoder_state_input[i])
                     decoder_state_output.append(state_output)
 
-            with vs.variable_scope("DecoderAttnCell"):
+            with vs.variable_scope("DecoderAttnCell") as scope:
                 decoder_output, state_output = self.attn_cell(inp, decoder_state_input[i+1])
                 decoder_state_output.append(state_output)
 
         return decoder_output, decoder_state_output
+
 
     def setup_beam(self):
         time_0 = tf.constant(0)
@@ -322,8 +316,21 @@ class NLCModel(object):
 
     def setup_loss(self):
         with vs.variable_scope("Logistic"):
+            doshape = tf.shape(self.decoder_output)
+            T, batch_size = doshape[0], doshape[1]
             do2d = tf.reshape(self.decoder_output, [-1, self.size])
             logits2d = rnn_cell._linear(do2d, self.vocab_size, True, 1.0)
+            outputs2d = tf.nn.log_softmax(logits2d)
+            self.outputs = tf.reshape(outputs2d, tf.pack([T, batch_size, self.vocab_size]))
+
+            targets_no_GO = tf.slice(self.target_tokens, [1, 0], [-1, -1])
+            masks_no_GO = tf.slice(self.target_mask, [1, 0], [-1, -1])
+            # easier to pad target/mask than to split decoder input since tensorflow does not support negative indexing
+            labels1d = tf.reshape(tf.pad(targets_no_GO, [[0, 1], [0, 0]]), [-1])
+            mask1d = tf.reshape(tf.pad(masks_no_GO, [[0, 1], [0, 0]]), [-1])
+            losses1d = tf.nn.sparse_softmax_cross_entropy_with_logits(logits2d, labels1d) * tf.to_float(mask1d)
+            losses2d = tf.reshape(losses1d, tf.pack([T, batch_size]))
+            self.losses = tf.reduce_sum(losses2d) / tf.to_float(batch_size)
 
     def dropout(self, inp):
         return tf.nn.dropout(inp, self.keep_prob)
@@ -434,10 +441,9 @@ class NLCModel(object):
 
         return outputs[0], None, outputs[1:]
 
-    def decode_beam(self, session, encoder_output, weight, beam_size, len_input):
+    def decode_beam(self, session, encoder_output, beam_size, len_input):
         input_feed = {}
-        input_feed[self.encoder_output_feed] = encoder_output
-        input_feed[self.weight] = weight
+        input_feed[self.encoder_output] = encoder_output
         input_feed[self.keep_prob] = 1.
         input_feed[self.beam_size] = beam_size
         input_feed[self.len_input] = len_input
