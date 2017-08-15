@@ -73,8 +73,10 @@ class GRUCellAttn(rnn_cell.GRUCell):
 
 
 class NLCModel(object):
-    def __init__(self, vocab_size, size, num_layers, max_gradient_norm, batch_size, learning_rate,
-                 learning_rate_decay_factor, dropout, forward_only=False, optimizer="adam"):
+    def __init__(self, vocab_size, embed_size, num_hidden_units, num_layers,
+                 max_gradient_norm, batch_size, learning_rate,
+                 learning_rate_decay_factor, dropout, forward_only=False,
+                 optimizer="adam"):
 
         self.size = size
         self.vocab_size = vocab_size
@@ -229,42 +231,14 @@ class NLCModel(object):
             next_bases = tf.floordiv(top_indices, self.vocab_size)
             next_mods = tf.mod(top_indices, self.vocab_size)
 
-            ############ Output
-            # cur_log_probs = tf.reshape(tf.gather(flat_log_probs, top_indices), [1, -1])
-            # cur_log_probs = tf.pad(cur_log_probs, [[0,0], [0,self.beam_size - beam_k]])
-            # next_cur = tf.concat(0, [cur_prob, cur_log_probs])
-            #
-            # bases_vec = tf.pad(tf.reshape(next_bases, [1, -1]),
-            #                    [[0,0],[0, self.beam_size - beam_k]])
-            # out_bases = tf.concat(0, [bases, bases_vec])
-            # mods_vec = tf.pad(tf.reshape(next_mods, [1, -1]), [[0,0],[0, self.beam_size - beam_k]])
-            # out_mods = tf.concat(0, [mods, mods_vec])
-            #
-            # cur_eos = tf.slice(logprobs2d, [0, nlc_data.EOS_ID], [batch_size, 1])
-            # cur_eos = tf.pad(tf.reshape(cur_eos, [1, -1]), [[0,0], [0, self.beam_size - batch_size]])
-            # next_eos_cur = tf.concat(0, [cur_eos_probs, cur_eos])
-            #############
-
             next_states = [tf.gather(state, next_bases) for state in state_output]
             next_beam_seqs = tf.concat(1, [tf.gather(beam_seqs, next_bases),
                                            tf.reshape(next_mods, [-1, 1])])
-            ############# output #########
-            # cur_prob = tf.gather(flat_total_probs, top_indices)
-            # prob_vector = tf.reshape(cur_prob, [1, -1])
-            # prob_vector = tf.pad(prob_vector, [[0,0],[0, self.beam_size - beam_k]])
-            # next_total = tf.concat(0, [total, prob_vector])
-            #############
 
             cand_seqs_pad = tf.pad(cand_seqs, [[0, 0], [0, 1]])
             beam_seqs_EOS = tf.pad(beam_seqs, [[0, 0], [0, 1]])
             new_cand_seqs = tf.concat(0, [cand_seqs_pad, beam_seqs_EOS])
             EOS_probs = tf.slice(total_probs, [0, nlc_data.EOS_ID], [batch_size, 1])
-
-            ############## output
-            # eos_prob_vec = tf.reshape(EOS_probs, [1, -1])
-            # eos_prob_vec = tf.pad(eos_prob_vec, [[0,0], [0, self.beam_size - batch_size]])
-            # next_eos_prob = tf.concat(0, [eos_probs, eos_prob_vec])
-            ###############
 
             new_cand_probs = tf.concat(0, [cand_probs, tf.reshape(EOS_probs, [-1])])
 
@@ -276,25 +250,17 @@ class NLCModel(object):
             cur_seq_prob = tf.reshape(tf.gather(flat_log_probs, top_indices), [beam_k, -1])
             next_beam_seq_prob = tf.concat(1, [new_beam_seq_prob, cur_seq_prob])
             cur_eos = tf.slice(logprobs2d, [0, nlc_data.EOS_ID], [batch_size, 1])
-            cand_seq_prob_pad = tf.pad(cand_seq_prob, [[0,0],[0,1]])
+            cand_seq_prob_pad = tf.pad(cand_seq_prob, [[0, 0], [0, 1]])
             beam_seq_prob_pad = tf.concat(1, [tf.reshape(beam_seq_prob,
                                                          [batch_size, -1]),
                                               cur_eos])
             new_cand_seq_prob = tf.concat(0, [cand_seq_prob_pad, beam_seq_prob_pad])
             next_cand_seq_prob = tf.gather(new_cand_seq_prob, next_cand_indices)
-
-
             return [next_cand_probs, next_cand_seqs, time + 1, next_beam_probs, next_beam_seqs, next_cand_seq_prob, next_beam_seq_prob] + next_states
 
         var_shape = []
-        # var_shape.append((total_probs_0, tf.TensorShape([None, None])))
-        # var_shape.append((eos_probs_0, tf.TensorShape([None, None])))
         var_shape.append((cand_probs_0, tf.TensorShape([None,])))
         var_shape.append((cand_seqs_0, tf.TensorShape([None, None])))
-        # var_shape.append((cur_probs_0, tf.TensorShape([None, None])))
-        # var_shape.append((cur_eos_probs_0, tf.TensorShape([None, None])))
-        # var_shape.append((bases_0, tf.TensorShape([None, None])))
-        # var_shape.append((mods_0, tf.TensorShape([None, None])))
         var_shape.append((time_0, time_0.get_shape()))
         var_shape.append((beam_probs_0, tf.TensorShape([None,])))
         var_shape.append((beam_seqs_0, tf.TensorShape([None, None])))
@@ -302,10 +268,8 @@ class NLCModel(object):
         var_shape.append((beam_seqs_prob_0, tf.TensorShape([None,None])))
         var_shape.extend([(state_0, tf.TensorShape([None, self.size])) for state_0 in states_0])
         loop_vars, loop_var_shapes = zip(* var_shape)
-        # loop_vars = (self.all_probs, self.all_total_probs, self.all_bases, self.all_mods, self.all_states) + loop_vars
         self.loop_vars = loop_vars
         self.loop_var_shapes = loop_var_shapes
-        # print(loop_var_shapes)
         ret_vars = tf.while_loop(cond=beam_cond, body=beam_step, loop_vars=loop_vars, back_prop=False)
         #ret_vars = tf.while_loop(cond=beam_cond, body=beam_step, loop_vars=loop_vars, shape_invariants=loop_var_shapes, back_prop=False)
         #    time, beam_probs, beam_seqs, cand_probs, cand_seqs, _ = ret_vars
@@ -313,6 +277,7 @@ class NLCModel(object):
         self.beam_output= ret_vars[1]
         self.beam_scores = ret_vars[0]
         self.beam_trans = ret_vars[5]
+
 
     def setup_loss(self):
         with vs.variable_scope("Logistic"):
