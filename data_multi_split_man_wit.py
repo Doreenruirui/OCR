@@ -64,6 +64,7 @@ def split_data():
     print total_man, total_wit, total_date_man_wit, total_date_man, total_date_wit
 
 
+
 def write_manual():
     dict_manual = load_obj(join(folder_multi, 'man'))
     pair_z = []
