@@ -41,12 +41,12 @@ def align(str1, str2):
 def align_re(str1, str2):
     len1 = len(str1)
     len2 = len(str2)
-    if len1 == 0:
-        return 0
-    if len2 == 0:
-        return 0
     d = np.ones((len1 + 1, len2 + 1), dtype=int) * 1000000
     op = np.zeros((len1 + 1, len2 + 1), dtype=int)
+    if len1 == 0:
+        return len2, d, op
+    if len2 == 0:
+        return len1, d, op
     for i in range(len1 + 1):
         d[i, 0] = i
         op[i, 0] = 2
@@ -69,6 +69,42 @@ def align_re(str1, str2):
                 elif d[i, j] == d[i - 1, j - 1] + 1:
                     op[i, j] = 3
     return d[len1, len2], d, op
+
+
+def count_operation(paras):
+    str1, str2 = paras
+    _, d, op = align_re(str1, str2)
+    len1, len2 = d.shape
+    len1 -= 1
+    len2 -= 1
+    # print(d[len1, len2])
+    j = len2
+    i = len1
+    path = []
+    while j >= 1 or i >= 1:
+        path.append((i, j))
+        if op[i, j] == 1:
+            j -= 1
+        elif op[i, j] == 2:
+            i -= 1
+        elif op[i, j] == 3:
+            i -= 1
+            j -= 1
+        else:
+            i -= 1
+            j -= 1
+    path = path[::-1]
+    num_ins = 0
+    num_del = 0
+    num_rep = 0
+    for (i, j) in path:
+        if op[i, j] == 1:
+            num_ins += 1
+        elif op[i, j] == 2:
+            num_del += 1
+        elif op[i, j] == 3:
+            num_rep += 1
+    return num_ins, num_del, num_rep
 
 
 def recover(str1, str2):
@@ -220,6 +256,23 @@ def align_pair(P, truth, cands, flag_char=1):
         thread_num, dis = results[i]
         output[thread_num] = dis
     return output
+
+
+def count_pair(P, truth, cands):
+    global output, output_str
+    ndata = len(truth)
+    paras = zip(truth, cands)
+    # results = []
+    # for ele in paras:
+    #     results.append(count_operation(ele))
+    results = P.map(count_operation, paras)
+    num_ins, num_del, num_rep = 0, 0, 0
+    for i in range(ndata):
+        cur_ins, cur_del, cur_rep = results[i]
+        num_ins += cur_ins
+        num_del += cur_del
+        num_rep += cur_rep
+    return num_ins, num_del, num_rep
 
 
 def align_beam(P, truth, cands, flag_char=1):

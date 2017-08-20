@@ -1,29 +1,45 @@
 from os.path import join, exists
-import os
+import sys
+from collections import OrderedDict
+
 
 folder_multi = '/scratch/dong.r/Dataset/OCR/multi'
 
 
-def get_train_data(train_id, split_id, error_ratio, lm_prob, ocr_prob, train, lm_name):
-    folder_train = join(folder_multi, str(train_id), str(split_id))
-    list_info = []
-    for line in file(join(folder_train, train + '.y.txt')):
-        list_info.append(line)
-    folder_out = join(folder_train, 'noisy_' + str(error_ratio) + '_' + str(lm_prob) + '_' + str(ocr_prob))
-    if not os.path.exists(folder_out):
-        os.makedirs(folder_out)
-    f_x = open(join(folder_out, train + '.x.txt'), 'w')
-    f_y = open(join(folder_out, train + '.y.txt'), 'w')
-    f_z = open(join(folder_out, train + '.z.txt'), 'w')
-    for i in range(len()):
-        print i
-        cur_x = [ele.strip() for ele in list_x[i].strip('\n').split('\t') if len(ele.strip()) > 0]
-        best_str, best_id, best_prob, probs = rank_sent(pool, cur_x)
-        if - best_prob / len(cur_x[best_id]) <= lm_prob * 0.01:
-            if best_prob / probs[0] <= error_ratio * 0.01 and - probs[0] / len(cur_x[0]) < 0.01 * ocr_prob:
-                f_x.write(cur_x[0] + '\n')
-                f_y.write(best_str + '\n')
-                f_z.write(list_y[i])
-    f_x.close()
-    f_y.close()
-    f_z.close()
+def get_train_data(folder_data, train):
+    dict_data_seq = OrderedDict()
+    line_id = 0
+    last_end = 0
+    num_line = 0
+    for line in file(join(folder_data, train + '.info.txt')):
+        cur_info = line.strip('\n').split('\t')
+        key1 = (cur_info[0], cur_info[1])
+        start = cur_info[2]
+        end = cur_info[3]
+        if key1 not in dict_data_seq:
+            dict_data_seq[key1] = []
+            dict_data_seq[key1].append([line_id])
+        else:
+            if start == last_end:
+                dict_data_seq[key1][-1].append(line_id)
+            else:
+                dict_data_seq[key1].append([line_id])
+        last_end = end
+        num_line += 1
+        line_id += 1
+    group_id = 0
+    line2group = [-1 for _ in range(num_line)]
+    for key in dict_data_seq:
+        for group in dict_data_seq[key]:
+            for line_id in group:
+                line2group[line_id] = group_id
+            group_id += 1
+    with open(join(folder_data, 'line2group'), 'w') as f_:
+        for item in line2group:
+            f_.write(str(item) + '\n')
+
+
+folder_test = join(folder_multi, sys.argv[1])
+folder_valid = join(folder_multi, sys.argv[1], sys.argv[2])
+get_train_data(folder_test, 'man_wit.test')
+get_train_data(folder_valid, 'man_wit.dev')

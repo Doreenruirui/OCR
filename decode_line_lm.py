@@ -35,7 +35,7 @@ import nlc_model
 import nlc_data
 #import nlc_data_no_filter as nlc_data
 from util import initialize_vocabulary, get_tokenizer
-from levenshtein import align_all_new, align
+from levenshtein import align
 from multiprocessing import Pool
 import kenlm
 import pdb
@@ -200,9 +200,7 @@ def decode():
         lines = [ele.strip() for ele in f_.readlines()]
     with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.y.txt'), 'r') as f_:
         truths = [ele.strip() for ele in f_.readlines()]
-    f_c = open(pjoin(folder_out, FLAGS.dev +  '.c.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
-    f_w = open(pjoin(folder_out, FLAGS.dev +  '.w.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
-    f_b = open(pjoin(folder_out, FLAGS.dev +  '.b.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+    f_ = open(pjoin(folder_out, FLAGS.dev +  '.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     if lm1 is not None or lm2 is not None:
         f_l = open(pjoin(folder_out, FLAGS.dev + '.l.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     else:
@@ -211,9 +209,7 @@ def decode():
         line = lines[line_id]
         sent = line.strip()
         if len(sent) == 0:
-            f_w.write('\n')
-            f_c.write('\n')
-            f_b.write('\n')
+            f_.write('\n')
             if f_l is not None:
                 f_l.write('\n')
             continue
