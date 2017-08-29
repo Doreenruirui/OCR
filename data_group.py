@@ -34,7 +34,7 @@ def get_train_data(folder_data, train):
             for line_id in group:
                 line2group[line_id] = group_id
             group_id += 1
-    with open(join(folder_data, 'line2group'), 'w') as f_:
+    with open(join(folder_data, train + '.line2group'), 'w') as f_:
         for item in line2group:
             f_.write(str(item) + '\n')
 
@@ -43,3 +43,5 @@ folder_test = join(folder_multi, sys.argv[1])
 folder_valid = join(folder_multi, sys.argv[1], sys.argv[2])
 get_train_data(folder_test, 'man_wit.test')
 get_train_data(folder_valid, 'man_wit.dev')
+get_train_data(folder_test, 'man.test')
+get_train_data(folder_valid, 'man.dev')

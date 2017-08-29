@@ -13,229 +13,104 @@
 # limitations under the License.
 # ==============================================================================
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
-import math
+import re
 import os
-import random
 import sys
 import time
-import random
-import string
-
 import numpy as np
-from six.moves import xrange
-import tensorflow as tf
 from os.path import join as pjoin
-
-import nlc_model
-#import nlc_model_global as nlc_model
-import nlc_data
-#import nlc_data_no_filter as nlc_data
-from util import initialize_vocabulary, get_tokenizer
-from levenshtein import align
 from multiprocessing import Pool
-import kenlm
-import pdb
-
-from flag import FLAGS
-
-reverse_vocab, vocab = None, None
-lm1 = None
-lm2 = None
+from util_lm import get_fst_for_group_paral, initialize_score
+from levenshtein import align_pair, align
 
 
-def create_model(session, vocab_size, forward_only):
-    model = nlc_model.NLCModel(
-        vocab_size, FLAGS.size, FLAGS.num_layers, FLAGS.max_gradient_norm, FLAGS.batch_size,
-        FLAGS.learning_rate, FLAGS.learning_rate_decay_factor, FLAGS.dropout,
-        forward_only=forward_only)
-    ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
-    if ckpt and tf.gfile.Exists(ckpt.model_checkpoint_path):
-        print("Reading model parameters from %s" % ckpt.model_checkpoint_path)
-        model.saver.restore(session, ckpt.model_checkpoint_path)
-    else:
-        print("Created model with fresh parameters.")
-        session.run(tf.initialize_all_variables())
-    return model
+folder_data = '/scratch/dong.r/Dataset/OCR/'
+data_dir = ''
+out_dir = ''
+lm_dir = ''
+dev = ''
+lm_name = ''
+start = 0
+end = -1
+w1 = 0.0
+w2 = 0.0
 
 
-def tokenize(sent, vocab, depth=FLAGS.num_layers):
-    align = pow(2, depth - 1)
-    token_ids = nlc_data.sentence_to_token_ids(sent, vocab, get_tokenizer(FLAGS.tokenizer))
-    ones = [1] * len(token_ids)
-    pad = (align - len(token_ids)) % align
-
-    token_ids += [nlc_data.PAD_ID] * pad
-    ones += [0] * pad
-
-    source = np.array(token_ids).reshape([-1, 1])
-    mask = np.array(ones).reshape([-1, 1])
-
-    return source, mask
-
-
-def detokenize(sents, reverse_vocab):
-    # TODO: char vs word
-    def detok_sent(sent):
-        outsent = ''
-        for t in sent:
-            if t >= len(nlc_data._START_VOCAB):
-                outsent += reverse_vocab[t]
-        return outsent
-    return [detok_sent(s) for s in sents]
-
-
-def lm_rank(strs, probs, lm):
-    if lm is not None:
-        lmscores = [lm.score(s)/(1+len(s.split())) for s in strs]
-    else:
-        lmscores = [0 for i in range(len(strs))]
-    return lmscores
-
-
-def sort_score_thread(para):
-    thread_num, a, b, probs, score1, score2 = para
-    rescores = [(1 - a - b) * q + a * l + b * p for (l, p, q) in zip(score1, score2, probs)]
-    rerank = [rs[0] for rs in sorted(enumerate(rescores), key=lambda x: x[1])]
-    generated = rerank[-1]
-    return thread_num, generated
-
-
-def lm_rank_all(P, strs, probs, list_para):
-    lmscore1 = lm_rank(strs, probs, lm1)
-    lmscore2 = lm_rank(strs, probs, lm2)
-    probs = [p / (len(s)+1) for (s, p) in zip(strs, probs)]
-    #for (s, p, l) in zip(strs, probs, lmscore1, lmscore2):
-    #    print(s, p, l)
-    paras = [(x, list_para[x][0], list_para[x][1], probs, lmscore1, lmscore2)
-                 for x in range(len(list_para))]
-    results = P.map(sort_score_thread, paras)
-    result_str = ['' for i in range(len(list_para))]
-    for thread_num, rank in results:
-        result_str[thread_num] = strs[rank[-1]]
-    return result_str
-
-
-def decode_beam(model, sess, encoder_output, max_beam_size, len_input):
-    toks, probs, prob_trans = model.decode_beam(sess, encoder_output, max_beam_size, len_input)
-    return toks.tolist(), probs.tolist(), prob_trans
-
-
-def decode_lattice(beamstrs, probs, prob_trans):
-    num_str = len(beamstrs)
-    dict_str = {}
-    for i in range(num_str):
-        cur_str = beamstrs[i]
-        for j in range(0, len(cur_str)):
-            prefix = cur_str[:j]
-            if prefix not in dict_str:
-                dict_str[prefix] = {}
-                dict_str[prefix][cur_str[j]] = prob_trans[i][j + 1]
-            else:
-                dict_str[prefix][cur_str[j]] = prob_trans[i][j + 1]
-        if cur_str not in dict_str:
-            dict_str[cur_str] = {}
-            dict_str[cur_str]['<eos>'] = prob_trans[i][len(cur_str) + 1]
-            dict_str[cur_str + '<eos>'] = probs[i]
-    return dict_str
-
-
-def fix_sent(P, model, sess, sent):
-    list_para = []
-    # Tokenize
-    input_toks, mask = tokenize(sent, vocab)
-    # Encode
-    encoder_output = model.encode(sess, input_toks, mask)
-    len_input = sum(mask)
-    # Decode
-    beam_toks, probs, prob_trans = decode_beam(model, sess, encoder_output, FLAGS.beam_size, len_input)
-    # De-tokenize
-    beam_strs = detokenize(beam_toks, reverse_vocab)
-
-    # lattice = decode_lattice(beam_strs, probs, prob_trans)
-    # Language Model ranking
-    if lm1 is not None and lm2 is not None:
-        best_str = lm_rank_all(P, beam_strs, probs, list_para)
-    else:
-        best_str = []
-    return beam_strs, probs, best_str
-
-
-def decode():
-    # Prepare NLC data.
-    global reverse_vocab, vocab, lm1, lm2
-
-    if FLAGS.lmfile1 is not None:
-      print("Loading Language model from %s" % FLAGS.lmfile1)
-      lm1 = kenlm.LanguageModel(FLAGS.lmfile1)
-
-    if FLAGS.lmfile2 is not None:
-      print("Loading Language model from %s" % FLAGS.lmfile2)
-      lm2 = kenlm.LanguageModel(FLAGS.lmfile2)
-
-    folder_out = FLAGS.out_dir
+def evaluate():
+    global folder_data, data_dir, out_dir, lm_dir, dev, start, end, w1, w2
+    data_dir = pjoin(folder_data, data_dir)
+    folder_test = pjoin(data_dir, out_dir)
+    folder_out = pjoin(folder_test, str(w1) + '_' + str(w2))
     if not os.path.exists(folder_out):
         os.makedirs(folder_out)
+    folder_tmp = pjoin(folder_out, 'tmp')
+    if not os.path.exists(folder_tmp):
+        os.makedirs(folder_tmp)
+    lines = []
+    for line in file(pjoin(data_dir, dev + '.x.txt')):
+        lines.append([ele.strip() for ele in line.strip('\n').split('\t')][0])
+    truths = []
+    for line in file(pjoin(data_dir, dev + '.y.txt')):
+        truths.append(line.strip('\n'))
+    outputs = []
+    for line in file(pjoin(folder_test, dev + '.o.txt.' + str(start) + '_' + str(end))):
+        outputs.append(line.strip())
+    output_probs = []
+    for line in file(pjoin(folder_test, dev + '.p.txt.' + str(start) + '_' + str(end))):
+        output_probs.append(float(line.strip()))
+    line2group = []
+    for line in file(pjoin(data_dir, dev + '.line2group')):
+        line2group.append(int(line.strip('\n')))
+    f_ = open(pjoin(folder_out, dev +  '.' + 'ec.txt.' + str(start) + '_' + str(end)), 'w')
+    pool = Pool(100, initializer=initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir)))
+    pro_group_id = line2group[start]
+    pro_group = []
+    pro_prob = []
+    pro_truth = []
+    pro_lines = []
+    initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir))
+    for line_id in range(start, end):
+        cur_start = (line_id - start) * 100
+        cur_end = (line_id + 1 - start) * 100
+        cur_group_id = line2group[line_id]
+        cur_group = outputs[cur_start: cur_end]
+        cur_prob = output_probs[cur_start: cur_end]
+        cur_line = lines[line_id]
+        cur_truth = truths[line_id]
+        if cur_group_id != pro_group_id:
+            best_str = get_fst_for_group_paral(pool, pro_group, pro_prob, pro_group_id, folder_tmp, w1, w2)
+            len_truth = len(''.join(pro_truth))
+            strip_truth = ''.join([ele.strip() for ele in pro_truth])
+            cur_dec = ''.join([ele[0].strip() for ele in pro_group]).lower()
+            dis1 = align(best_str.lower(), ''.join(pro_truth).lower())
+            dis2 = align(''.join(pro_lines).lower(), strip_truth.lower())
+            dis3 = align(cur_dec, strip_truth.lower())
+            pro_group = []
+            pro_truth = []
+            pro_prob = []
+            pro_group_id = cur_group_id
+            f_.write(str(dis1) + '\t' + str(len_truth) + '\t' + str(dis2) +  '\t' + str(dis3) + '\t' + str(len(strip_truth)) + '\n')
+        pro_group.append(cur_group)
+        pro_prob.append(cur_prob)
+        pro_truth.append(cur_truth)
+        pro_lines.append(cur_line)
+    f_.close()
 
 
-    print("Preparing NLC data in %s" % FLAGS.data_dir)
-    nthread = FLAGS.nthread
-    pool = Pool(processes=nthread)
-    vocab_path = pjoin(FLAGS.data_dir, "vocab.dat")
-    vocab, reverse_vocab = initialize_vocabulary(vocab_path)
-    vocab_size = len(vocab)
-    print("Vocabulary size: %d" % vocab_size)
-    if FLAGS.gpu_frac == 1:
-        sess = tf.Session()
-    else:
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.gpu_frac)
-        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True))
-    print("Creating %d layers of %d units." % (FLAGS.num_layers, FLAGS.size))
-    model = create_model(sess, vocab_size, False)
-    tic = time.time()
-    with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.x.txt'), 'r') as f_:
-        lines = [ele.strip() for ele in f_.readlines()]
-    with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.y.txt'), 'r') as f_:
-        truths = [ele.strip() for ele in f_.readlines()]
-    f_ = open(pjoin(folder_out, FLAGS.dev +  '.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
-    if lm1 is not None or lm2 is not None:
-        f_l = open(pjoin(folder_out, FLAGS.dev + '.l.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
-    else:
-        f_l = None
-    for line_id in range(FLAGS.start, FLAGS.end):
-        line = lines[line_id]
-        sent = line.strip()
-        if len(sent) == 0:
-            f_.write('\n')
-            if f_l is not None:
-                f_l.write('\n')
-            continue
-        output_sents, output_probs, best_str = fix_sent(pool, model, sess, sent)
-        cur_best = output_sents[0]
-        f_b.write(cur_best + '\n')
-        min_dis, min_str = align_all_new(pool, truths[line_id], output_sents, nthread, flag_char=1)
-        f_c.write(min_str + '\t' + str(min_dis) + '\n')
-        min_dis_word, min_str_word = align_all_new(pool, truths[line_id], output_sents, nthread, flag_char=0)
-        f_w.write(min_str_word + '\t' + str(min_dis_word) + '\n')
-        if f_l is not None:
-            f_l.write('\t'.join(best_str) + '\n')
-        print(line_id)
-        if line_id % 100 == 0:
-            toc = time.time()
-            print(toc - tic)
-            tic = time.time()
-    f_c.close()
-    f_b.close()
-    f_w.close()
-    if f_l is not None:
-        f_l.close()
-
-def main(_):
-    decode()
+def main():
+    global data_dir, out_dir, lm_dir, dev, start, end, w1, w2
+    data_dir = sys.argv[1]
+    out_dir = sys.argv[2]
+    lm_dir = sys.argv[3]
+    # lm_name = sys.argv[4]
+    dev = sys.argv[4]
+    start = int(sys.argv[5])
+    end = int(sys.argv[6])
+    w1 = float(sys.argv[7])
+    w2 = float(sys.argv[8])
+    evaluate()
 
 
 if __name__ == "__main__":
-    tf.app.run()
+    main()

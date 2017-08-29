@@ -17,20 +17,28 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import math
 import os
+import random
+import sys
 import time
+import random
+import string
+
 import numpy as np
 from six.moves import xrange
 import tensorflow as tf
-from multiprocessing import Pool
 from os.path import join as pjoin
-import nlc_model_multiple as nlc_model
+
+import nlc_model
+#import nlc_model_global as nlc_model
 import nlc_data
-from levenshtein import align, align_one2many
+#import nlc_data_no_filter as nlc_data
 from util import initialize_vocabulary, get_tokenizer
+from multiprocessing import Pool
+import pdb
 
 from flag import FLAGS
-
 
 reverse_vocab, vocab = None, None
 
@@ -50,21 +58,19 @@ def create_model(session, vocab_size, forward_only):
     return model
 
 
-def padded(tokens, depth):
-  maxlen = max(map(lambda x: len(x), tokens))
-  align = pow(2, depth - 1)
-  padlen = maxlen + (align - maxlen) % align
-  return map(lambda token_list: token_list + [0] * (padlen - len(token_list)), tokens)
+def tokenize(sent, vocab, depth=FLAGS.num_layers):
+    align = pow(2, depth - 1)
+    token_ids = nlc_data.sentence_to_token_ids(sent, vocab, get_tokenizer(FLAGS.tokenizer))
+    ones = [1] * len(token_ids)
+    pad = (align - len(token_ids)) % align
 
+    token_ids += [nlc_data.PAD_ID] * pad
+    ones += [0] * pad
 
-def tokenize(sents, vocab, depth=FLAGS.num_layers):
-    token_ids = []
-    for sent in sents:
-        token_ids.append(nlc_data.sentence_to_token_ids(sent, vocab, get_tokenizer(FLAGS.tokenizer)))
-    token_ids = padded(token_ids, depth)
-    source = np.array(token_ids).T
-    source_mask = (source != 0).astype(np.int32)
-    return source, source_mask
+    source = np.array(token_ids).reshape([-1, 1])
+    mask = np.array(ones).reshape([-1, 1])
+
+    return source, mask
 
 
 def detokenize(sents, reverse_vocab):
@@ -107,10 +113,7 @@ def fix_sent(model, sess, sent):
     input_toks, mask = tokenize(sent, vocab)
     # Encode
     encoder_output = model.encode(sess, input_toks, mask)
-    s1, s2, s3 = encoder_output.shape
-    encoder_output = np.transpose(encoder_output, (1, 0, 2))
-    encoder_output = np.reshape(encoder_output, [s2, s1, 1, s3])
-    len_input = mask.shape[0]
+    len_input = sum(mask)
     # Decode
     beam_toks, probs, prob_trans = decode_beam(model, sess, encoder_output, FLAGS.beam_size, len_input)
     # De-tokenize
@@ -138,41 +141,20 @@ def decode():
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.gpu_frac)
         sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True))
     print("Creating %d layers of %d units." % (FLAGS.num_layers, FLAGS.size))
-    model = create_model(sess, vocab_size, True)
+    model = create_model(sess, vocab_size, False)
     tic = time.time()
     with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.x.txt'), 'r') as f_:
-        lines = [ele.strip() for ele in f_.readlines()]
-    flag_evl = 0
-    if flag_evl:
-        with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.y.txt'), 'r') as f_:
-            truths = [ele.lower().strip() for ele in f_.readlines()]
-        f_o = open(pjoin(folder_out, FLAGS.dev + '.avg' + '.ec.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
-        pool = Pool(100)
-    else:
-        #f_o = open(pjoin(folder_out, FLAGS.dev + '.om1.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end))    , 'w')
-        f_o = open(pjoin(folder_out, FLAGS.dev + '.avg' + '.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+        lines = [ele.strip('\n') for ele in f_.readlines()]
+    f_o = open(pjoin(folder_out, FLAGS.dev + '.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     for line_id in range(FLAGS.start, FLAGS.end):
         line = lines[line_id]
-        if flag_evl:
-            cur_truth = truths[line_id]
         sents = [ele for ele in line.strip('\n').split('\t')][:20]
         sents = [ele for ele in sents if len(ele.strip()) > 0]
-        #sents = [ele.replace('-', '_') for ele in sents if len(ele.strip()) > 0]
-        if len(sents) > 0:
-            output_sents, output_probs = fix_sent(model, sess, sents)
-            #output_sents = [ele.replace('_', '-') for ele in output_sents]
-            if flag_evl:
-                output_sents = [ele.lower() for ele in output_sents]
-                best_dis, best_str = align_one2many(pool, cur_truth, output_sents)
-                top_dis = align(cur_truth, output_sents[0])
-                f_o.write('\t'.join(map(str, [best_dis, top_dis, len(cur_truth)])) + '\n')
-            else:
-                f_o.write('\n'.join(output_sents) + '\n')
-        else:
-            if flag_evl:
-                f_o.write('\t'.join(map(str, [len(cur_truth), len(cur_truth), len(cur_truth)])) + '\n')
-            else:
-                f_o.write('\n' * 100)
+        outputs = []
+        for sent in sents:
+            output_sents, output_probs = fix_sent(model, sess, sent)
+            outputs.append(output_sents[0])
+        f_o.write('\t'.join(outputs) + '\n')
         if line_id % 100 == 0:
             toc = time.time()
             print(toc - tic)

@@ -44,9 +44,9 @@ def align_re(str1, str2):
     d = np.ones((len1 + 1, len2 + 1), dtype=int) * 1000000
     op = np.zeros((len1 + 1, len2 + 1), dtype=int)
     if len1 == 0:
-        return len2, d, op
+        return len2, d * 0, op
     if len2 == 0:
-        return len1, d, op
+        return len1, d * 0, op
     for i in range(len1 + 1):
         d[i, 0] = i
         op[i, 0] = 2
@@ -73,6 +73,10 @@ def align_re(str1, str2):
 
 def count_operation(paras):
     str1, str2 = paras
+    if len(str1) == 0:
+        return len(str2), 0, 0
+    elif len(str2) == 0:
+        return 0, len(str1), 0
     _, d, op = align_re(str1, str2)
     len1, len2 = d.shape
     len1 -= 1

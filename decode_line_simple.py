@@ -146,6 +146,7 @@ def decode():
     with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.x.txt'), 'r') as f_:
         lines = [ele.strip('\n') for ele in f_.readlines()]
     f_o = open(pjoin(folder_out, FLAGS.dev + '.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+    f_p = open(pjoin(folder_out, FLAGS.dev + '.p.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     for line_id in range(FLAGS.start, FLAGS.end):
         line = lines[line_id].split('\t')[0]
         sent = line.strip()
@@ -159,12 +160,14 @@ def decode():
             #sent = output_sents[i].replace('_', '-')
             prob = output_probs[i]
             f_o.write(sent + '\n')
+            f_p.write(str(prob) + '\n')
             # f_o.write(sent + '\t' + str(prob) + '\n')
         if line_id % 100 == 0:
             toc = time.time()
             print(toc - tic)
             tic = time.time()
     f_o.close()
+    f_p.close()
 
 
 def main(_):

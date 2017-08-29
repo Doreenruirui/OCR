@@ -31,13 +31,14 @@ def get_string_to_score(sent):
             items.append(ele)
     return ' '.join(items)
 
+
 def score_sent(paras):
     global lm, rm_voc
     if len(paras) == 1:
         sent = paras[0]
     else:
         tid, sent = paras
-    sent = ''.join([ele for ele in sent if ele not in rm_voc])
+    # sent = ''.join([ele for ele in sent if ele not in rm_voc])
     f = sentence_fst(remove_nonascii(sent), 0)
     score = float(fst.shortestdistance(fst.intersect(f, lm), reverse=True)[0])
     if len(paras) == 1:
@@ -54,10 +55,11 @@ def get_voc_lm(folder_lm):
     return list(set(list_ilabel))
 
 def initialize_score(folder_voc, folder_lm):
-    global lm, tbl, file_voc, rm_voc, dict_char2id
+    global lm, tbl, file_voc, rm_voc, dict_char2id, concat_f
     lm = fst.Fst.read(pjoin(folder_lm, 'train.mod'))
     file_voc = pjoin(folder_voc, 'ascii.syms')
     tbl = fst.SymbolTable.read_text(file_voc)
+    concat_f = fst.Fst.read('/scratch/dong.r/Dataset/OCR/lm/concat.fst')
     get_dict()
     list_voc = []
     for line in file(pjoin(folder_lm, 'voc')):
@@ -68,6 +70,7 @@ def initialize_score(folder_voc, folder_lm):
         if char not in list_voc:
             rm_voc.append(char)
     print('Remove: ', rm_voc)
+
 
 def initialize(folder_lm):
     global lm, tbl, concat_f, file_voc
@@ -95,7 +98,9 @@ def get_voc():
 
 
 def sentence_fst(sent, pb):
-    global dict_char2id
+    global dict_char2id, rm_voc
+    sent = ''.join([ele for ele in sent if ele not in rm_voc])
+    sent = remove_nonascii(sent)
     f = fst.Fst()
     s = f.add_state()
     f.set_start(s)
@@ -149,6 +154,7 @@ def thread_concat_fst(paras):
 
 
 def thread_list_concat_fst(paras):
+    global concat_f
     list_file_name = paras
     file_start = list_file_name[0].split('.')[-1]
     file_end = list_file_name[-1].split('.')[-1]
@@ -197,7 +203,7 @@ def thread_sentence_fst(paras):
     # print thread_no
 
 def thread_group_fst(paras):
-    group_sent, group_pb, w1, w2, file_name,  = paras
+    group_sent, group_pb, w1, w2, file_name = paras
     list_fst = []
     for sent, pb in zip(group_sent, group_pb):
         pb = np.log10(np.exp(pb)) * w1 + len(sent) * w2
@@ -292,25 +298,23 @@ def get_fst_for_group_sent(group, group_prob, w):
     string= print_path(final)
     return string
 
-
-def get_fst_for_group_paral(pool, group, group_prob, pro_id, beam_size, file_no, folder_data, w1, w2):
-    start_line = pro_id[0]
-    len_group=len(pro_id)
-    list_fst_file = [pjoin(folder_data, 'fst.tmp.%d.%d' % (file_no, i))
-                    for i in range(start_line, start_line + len_group)]
-    list_weight1 = [w1 for _ in range(len_group)]
-    list_weight2 = [w2 for _ in range(len_group)]
+def get_fst_for_group_paral(pool, group, group_prob, group_id, folder_data, w1, w2):
+    num_line = len(group)
+    list_fst_file = [pjoin(folder_data, 'fst.tmp.%d.%d' % (group_id, i))
+                    for i in range(num_line)]
+    list_weight1 = [w1 for _ in range(num_line)]
+    list_weight2 = [w2 for _ in range(num_line)]
     pool.map(thread_group_fst, zip(group, group_prob, list_weight1, list_weight2, list_fst_file))
     list_concat_file = []
     chunk_size = 10
-    nchunk = int(np.ceil(len_group * 1. / chunk_size))
+    nchunk = int(np.ceil(num_line * 1. / chunk_size))
     list_res_file = []
     for i in range(nchunk):
-        start = i * chunk_size + start_line
-        end = min((i + 1) * chunk_size, len_group) + start_line
-        list_concat_file.append([pjoin(folder_data, 'fst.tmp.%d.%d' % (file_no, i))
+        start = i * chunk_size
+        end = min((i + 1) * chunk_size, num_line)
+        list_concat_file.append([pjoin(folder_data, 'fst.tmp.%d.%d' % (group_id, i))
                     for i in range(start, end)])
-        list_res_file.append(pjoin(folder_data, 'fst.tmp.%d.%d_%d') % (file_no, start, end - 1))
+        list_res_file.append(pjoin(folder_data, 'fst.tmp.%d.%d_%d') % (group_id, start, end - 1))
     pool.map(thread_list_concat_fst, list_concat_file)
     final = list_concat_fst(list_res_file)
     # set_symbol(final)
