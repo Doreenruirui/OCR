@@ -145,16 +145,15 @@ def decode():
     tic = time.time()
     with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.x.txt'), 'r') as f_:
         lines = [ele.strip('\n') for ele in f_.readlines()]
-    f_o = open(pjoin(folder_out, FLAGS.dev + '.all.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+    f_o = open(pjoin(folder_out, FLAGS.dev + '.top20.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     for line_id in range(FLAGS.start, FLAGS.end):
-        line = lines[line_id]
-        sents = [ele for ele in line.strip('\n').split('\t')][:20]
-        sents = [ele for ele in sents if len(ele.strip()) > 0]
-        outputs = []
-        for sent in sents:
-            output_sents, output_probs = fix_sent(model, sess, sent)
-            outputs.append(output_sents[0])
-        f_o.write('\t'.join(outputs) + '\n')
+        line = lines[line_id].split('\t')[0]
+        sent = line.strip()
+        if len(sent) == 0:
+            f_o.write('\n' * 100)
+            continue
+        output_sents, output_probs = fix_sent(model, sess, sent)
+        f_o.write('\t'.join(output_sents[:20]) + '\n')
         if line_id % 100 == 0:
             toc = time.time()
             print(toc - tic)
