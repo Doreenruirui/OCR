@@ -131,10 +131,15 @@ def fix_sent(model, sess, sent):
     # Tokenize
     scalar = FLAGS.alpha
     input_toks, mask = tokenize(sent, vocab)
-    score = score_sent(sent)
-    for i in range(score.shape[0]):
-        score[i, 0, 0] = np.float_power(10, score[i, 0, 0] * scalar)
-    score = score / sum(sum(score))
+    # score = score_sent(sent)
+    # for i in range(score.shape[0]):
+    #     score[i, 0, 0] = np.float_power(10, score[i, 0, 0] * scalar)
+    num_sent = len(sent)
+    score = np.zeros((num_sent, 1, 1))
+    score[0, 0, 0] = 0.6
+    for i in range(1, num_sent):
+        score[i, 0, 0] = (1 - score[0, 0, 0]) / (num_sent - 1)
+    # score = score / sum(sum(score))
     # Encode
     encoder_output = model.encode(sess, input_toks, mask)
     s1, s2, s3 = encoder_output.shape

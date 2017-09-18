@@ -33,13 +33,13 @@ def check_manual():
 
 def get_all_date():
     dict_date = OrderedDict()
-    for line in file(join(folder_multi, 'man.info.txt')):
-        items = line.split('\t')
-        cur_date = items[0]
-        if cur_date not in dict_date:
-            dict_date[cur_date] = 1
+    for prefix in ['man', 'man_wit']:
+        for line in file(join(folder_multi, prefix + '.info.txt')):
+            items = line.split('\t')
+            cur_date = items[0]
+            if cur_date not in dict_date:
+                dict_date[cur_date] = 1
     save_obj(join(folder_multi, 'date_info'), dict_date)
-
 
 
 def split_train_test(train_ratio, split_id):
@@ -82,7 +82,6 @@ def split_train_dev(train_ratio, train_id, split_id):
              {'train': new_train_date, 'test': test_date})
 
 
-
 def split_date(train_id, split_id):
     def get_index(name_train, name_man):
         index = {}
@@ -104,28 +103,10 @@ def split_date(train_id, split_id):
         line_id = 0
         for line in file(input_file):
             if line_id in index:
-                if 'wit' in output_file and '.x' in output_file:
-                    new_line = []
-                    for item in line.strip('\n').split('\t'):
-                        cur_item = ' '.join([ele for ele in item.split(' ') if len(ele.strip()) > 0])
-                        new_line.append(cur_item)
-                    out_file.write('\t'.join(new_line) + '\n')
-                elif '.x' in output_file:
-                    out_file.write(line.strip() + '\n')
+                if '.x' in output_file:
+                    out_file.write(line)
                 elif '.y' in output_file:
-                    line = line.strip('\n').replace('\t', ' ')
-                    flag_begin = 0
-                    flag_end = 0
-                    if len(line[0].strip()) == 0:
-                        flag_begin = 1
-                    if len(line[-1].strip()) == 0:
-                        flag_end = 1
-                    cur_line = ' '.join([ele for ele in line.split(' ') if len(ele.strip()) > 0])
-                    if flag_begin:
-                        cur_line = ' ' + cur_line
-                    if flag_end:
-                        cur_line += ' '
-                    out_file.write(cur_line + '\n')
+                    out_file.write(line)
                 else:
                     out_file.write(line)
             line_id += 1
@@ -141,33 +122,36 @@ def split_date(train_id, split_id):
     print len(dict_date['train']) + len(dict_date['test']) + len(dict_date['dev'])
     index = {}
     for train in ['train', 'test', 'dev']:
-        for man in ['wit']:
-        # for man in ['man', 'man_wit', 'wit']:
+        for man in ['man', 'man_wit', 'wit']:
             index[(train, man)] = get_index(train, man)
-    # for man in ['man', 'man_wit', 'wit']:
-    for man in ['wit']:
+    for man in ['man', 'man_wit', 'wit']:
         for train in ['train', 'test', 'dev']:
             print len(index[(train, man)])
     list_file = {}
     input_file = {}
-    # for man in ['man', 'man_wit', 'wit']:
-    for man in ['wit']:
-        for postfix in ['x']:
-        # for postfix in ['x', 'y']:
+    for man in ['man', 'man_wit', 'wit']:
+        if man == 'wit':
+            list_postfix = ['x']
+        else:
+            list_postfix = ['x', 'y']
+        for postfix in list_postfix:
             list_file[(man, 'test', postfix)] = join(folder_test, man + '.test.' + postfix + '.txt')
             for prefix in ['train', 'dev']:
                 list_file[(man, prefix, postfix)] = join(folder_train, man + '.' + prefix + '.' + postfix + '.txt')
             input_file[(man, postfix)] = join(folder_multi,  man +'.' + postfix + '.txt')
-    # for man in ['man', 'man_wit', 'wit']:
-    for man in ['wit']:
+    for man in ['man', 'man_wit', 'wit']:
         list_file[(man, 'test', 'info')] = join(folder_test, man + '.test.' + 'info.txt')
         for prefix in ['train', 'dev']:
             list_file[(man, prefix, 'info')] = join(folder_train, man + '.' + prefix + '.' + 'info.txt')
         input_file[(man, 'info')] = join(folder_multi, man + '.info.txt')
-    # for man in ['man', 'man_wit', 'wit']:
-    for man in ['wit']:
+    for man in ['man', 'man_wit', 'wit']:
+    # for man in ['wit']:
         for prefix in ['train', 'test', 'dev']:
-            for postfix in ['x']:
+            if man == 'wit':
+                list_postfix = ['x']
+            else:
+                list_postfix = ['x', 'y']
+            for postfix in list_postfix:
             # for postfix in ['x', 'y']:
                 write_data(index[prefix, man], input_file[(man, postfix)], list_file[(man, prefix, postfix)])
             write_data(index[prefix, man], input_file[(man, 'info')], list_file[(man, prefix, 'info')])
@@ -229,20 +213,20 @@ def get_train_data(train_id, split_id, error_ratio, train):
     out_y.close()
     out_info.close()
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/multi'
+folder_multi = '/scratch/dong.r/Dataset/OCR/book'
 # check_manual()
-# get_all_date()
-# split_train_test(0.8, 0)
-# split_train_dev(0.8, 0, 0)
+get_all_date()
+split_train_test(0.8, 0)
+split_train_dev(0.8, 0, 0)
 cur_test_id =  int(sys.argv[1])
 cur_train_id = int(sys.argv[2])
 cur_error = int(sys.argv[3])
-#split_train_test(0.8, cur_test_id)
-#split_train_dev(0.8, cur_test_id, cur_train_id)
-#print ('Splitting Data')
+split_train_test(0.8, cur_test_id)
+split_train_dev(0.8, cur_test_id, cur_train_id)
+print ('Splitting Data')
 split_date(cur_test_id, cur_train_id)
-#print ('Computing Error Rate')
-#compute_error_rate(cur_test_id, cur_train_id)
-# print ('Get Training and Dev data')
-# get_train_data(cur_test_id, cur_train_id, cur_error, 'train')
-# get_train_data(cur_test_id, cur_train_id, cur_error, 'dev')
+print ('Computing Error Rate')
+compute_error_rate(cur_test_id, cur_train_id)
+print ('Get Training and Dev data')
+get_train_data(cur_test_id, cur_train_id, cur_error, 'train')
+get_train_data(cur_test_id, cur_train_id, cur_error, 'dev')

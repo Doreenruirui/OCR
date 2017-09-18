@@ -19,13 +19,13 @@ def error_rate(dis_xy, len_y):
     macro_error = np.sum(dis_xy) / np.sum(len_y)
     return micro_error, macro_error
 
-def evaluate_man(folder_name, prefix='dev'):
+def evaluate_man(folder_name, prefix='dev', num=-1):
     global folder_data
     cur_folder_data = pjoin(folder_data, folder_name)
     with open(pjoin(cur_folder_data, prefix + '.x.txt'), 'r') as f_:
-        list_x = [ele.lower().strip() for ele in f_.readlines()]
+        list_x = [ele.lower().strip() for ele in f_.readlines()][:num]
     with open(pjoin(cur_folder_data, prefix + '.y.txt'), 'r') as f_:
-        list_y = [ele.strip().lower() for ele in f_.readlines()]
+        list_y = [ele.strip().lower() for ele in f_.readlines()][:num]
     len_yc = [len(y) for y in list_y]
     pool = Pool(100)
     dis_xy = align_pair(pool, list_x, list_y)
@@ -61,5 +61,5 @@ def evaluate_man_wit(folder_name, prefix='dev'):
 
 cur_folder = sys.argv[1]
 cur_prefix = sys.argv[2]
-#evaluate_man(cur_folder, cur_prefix)
-evaluate_man_wit(cur_folder, cur_prefix)
+evaluate_man(cur_folder, cur_prefix, 30000)
+#evaluate_man_wit(cur_folder, cur_prefix)

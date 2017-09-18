@@ -11,7 +11,7 @@ from util_lm_kenlm import score_sent, initialize
 from levenshtein import align
 
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/multi'
+folder_multi = '/scratch/dong.r/Dataset/OCR/book'
 folder_lm = '/scratch/dong.r/Dataset/OCR/lm/char'
 
 

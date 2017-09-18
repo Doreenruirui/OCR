@@ -4,21 +4,29 @@ import os
 import sys
 
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/multi'
+folder_multi = '/scratch/dong.r/Dataset/OCR'
 
 
-def get_train_data(train_id, split_id, error_ratio, train_ratio, train):
-    folder_train = join(folder_multi, str(train_id), str(split_id))
-    folder_error = join(folder_train, str(error_ratio))
+def get_train_data(cur_folder, train_ratio, train):
+    folder_error = join(folder_multi, cur_folder)
     list_x = []
     for line in file(join(folder_error, train + '.x.txt')):
         list_x.append(line)
     list_y = []
     for line in file(join(folder_error, train + '.y.txt')):
         list_y.append(line)
-    list_info = []
-    for line in file(join(folder_error, train + '.info.txt')):
-        list_info.append(line)
+    flag_z = 0
+    if os.path.exists(join(folder_error, train + '.z.txt')):
+        list_z = []
+        flag_z = 1
+        for line in file(join(folder_error, train + '.z.txt')):
+            list_z.append(line)
+    flag_info = 0
+    if os.path.exists(join(folder_error, train + '.info.txt')):
+        list_info = []
+        flag_info = 1
+        for line in file(join(folder_error, train + '.info.txt')):
+            list_info.append(line)
     num_line = len(list_x)
     rand_index = np.arange(num_line)
     np.random.shuffle(rand_index)
@@ -29,23 +37,30 @@ def get_train_data(train_id, split_id, error_ratio, train_ratio, train):
         os.makedirs(folder_out)
     f_x = open(join(folder_out, train + '.x.txt'), 'w')
     f_y = open(join(folder_out, train + '.y.txt'), 'w')
-    f_info = open(join(folder_out, train + '.info.txt'), 'w')
+    if flag_info:
+        f_info = open(join(folder_out, train + '.info.txt'), 'w')
+    if flag_z:
+        f_z = open(join(folder_out, train + '.z.txt'), 'w')
     for i in range(num_train):
         cur_index = train_index[i]
         f_x.write(list_x[cur_index])
         f_y.write(list_y[cur_index])
-        f_info.write(list_info[cur_index])
+        if flag_z:
+            f_z.write(list_z[cur_index])
+        if flag_info:
+            f_info.write(list_info[cur_index])
     f_x.close()
     f_y.close()
-    f_info.close()
+    if flag_z:
+        f_z.close()
+    if flag_info:
+        f_info.close()
 
 
-arg_train_id = int(sys.argv[1])
-arg_split_id = int(sys.argv[2])
-arg_error_ratio = int(sys.argv[3])
-arg_train_ratio = int(sys.argv[4])
-arg_train = sys.argv[5]
-get_train_data(arg_train_id, arg_split_id, arg_error_ratio, arg_train_ratio, arg_train)
+arg_folder = sys.argv[1]
+arg_train_ratio = int(sys.argv[2])
+arg_train = sys.argv[3]
+get_train_data(arg_folder, arg_train_ratio, arg_train)
 
 
 

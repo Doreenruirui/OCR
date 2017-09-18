@@ -6,7 +6,7 @@ from levenshtein import count_pair, align_pair
 from multiprocessing import Pool
 
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/book'
+folder_multi = '/scratch/dong.r/Dataset/OCR'
 
 
 def compute_distance_single(train_id, split_id, error_ratio, train):
@@ -52,12 +52,13 @@ def compute_distance(train_id, split_id, error_ratio, train):
 
 def compute_operation_single(folder_data, train):
     # folder_train = join(folder_multi, str(train_id), str(split_id), str(error_ratio))
+    folder_train = join(folder_multi, folder_data)
     list_x = []
-    for line in file(join(folder_data, train + '.x.txt')):
+    for line in file(join(folder_train, train + '.x.txt')):
         list_x.append(line.strip())
     list_y = []
     len_y = 0
-    for line in file(join(folder_data, train + '.y.txt')):
+    for line in file(join(folder_train, train + '.y.txt')):
         list_y.append(line.strip())
         len_y += len(line.strip())
     pool = Pool(100)
@@ -116,8 +117,8 @@ def error_statistics(train_id, split_id):
     print macro, macro_ocr, macro_wit
 
 
-def get_train_single(train_id, split_id, error_ratio, train):
-    folder_train = join(folder_multi, str(train_id), str(split_id), str(error_ratio))
+def get_train_single(folder_data, train):
+    folder_train = join(folder_multi, folder_data)
     str_y = ''
     line_id = 0
     num_y = []
@@ -128,9 +129,9 @@ def get_train_single(train_id, split_id, error_ratio, train):
     str_y = [ele for ele in str_y]
     print len(str_y)
     print str_y[:10]
-    ins_ratio = 0.0367041080885
-    del_ratio = 0.0164138089303
-    rep_ratio = 0.0977654722855
+    ins_ratio = 0.0195742114501
+    del_ratio = 0.014355878212
+    rep_ratio = 0.057580123945
     error_ratio = ins_ratio + del_ratio + rep_ratio
     ins_v = ins_ratio / (ins_ratio + del_ratio + rep_ratio)
     del_v = (ins_ratio + del_ratio) / (ins_ratio + del_ratio + rep_ratio)
@@ -225,21 +226,17 @@ def get_train_multi(train_id, train):
             start += num_x[i]
 
 
-arg_train_id = sys.argv[1]
-arg_split_id = sys.argv[2]
-arg_error = sys.argv[3]
-arg_train = sys.argv[4]
+arg_folder_data = sys.argv[1]
 # compute_distance_single(arg_train_id, arg_split_id)
 # error_statistics(arg_train_id, arg_split_id)
-arg_folder_data = join(folder_multi, arg_train_id, arg_split_id, arg_error)
-arg_folder_data = join(arg_folder_data, 'single')
-compute_operation_single(arg_folder_data, 'train')
+#compute_operation_single(arg_folder_data, 'train')
 # arg_folder_data = join(folder_multi, arg_train_id, arg_split_id, arg_error)
 # compute_operation_single(arg_folder_data, 'dev')
 # arg_folder_data = join(folder_multi, arg_train_id)
 # compute_operation_multi(arg_folder_data, 'man_wit.train')
 # arg_folder_data = join(folder_multi, arg_train_id, arg_split_id)
 # compute_operation_multi(arg_folder_data, 'man_wit.dev')
-get_train_single(arg_train_id, arg_split_id, arg_error, 'train')
-get_train_single(arg_train_id, arg_split_id, arg_error, 'dev')
+# arg_folder_data = sys.argv[1]
+get_train_single(arg_folder_data, 'train')
+get_train_single(arg_folder_data, 'dev')
 # get_train_multi(arg_train_id, 'man_wit.test')

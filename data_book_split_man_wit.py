@@ -5,9 +5,6 @@ import re
 from PyLib.operate_file import load_obj, save_obj
 
 
-replace_xml = {'&lt;': '<', '&gt;': '>', '&quot;': '"',  '&apos;': '\'', '&amp;': '&'}
-
-
 def remove_nonascii(text):
     return re.sub(r'[^\x00-\x7F]', '', text)
 
@@ -28,9 +25,8 @@ def split_data():
         cur_end = int(items[4])
         line_id = int(items[1])
         cur_id = items[2]
-        cur_date = re.findall('[0-9]{4}-[0-9]{2}-[0-9]{2}', cur_id)
-        cur_ed =  re.findall('ed-([0-9]{1})', cur_id)
-        cur_seq = re.findall('seq-([0-9]{1})', cur_id)
+        book_id = cur_id[-4:]
+        book = cur_id[:-5]
         num_wit = int(items[5])
         num_manual = int(items[6])
         wit_line = -1
@@ -39,24 +35,26 @@ def split_data():
             total_wit += 1
         manual_line = -1
         if num_manual > 0:
-            manual_line = int(items[8])
+            if num_wit > 0:
+                manual_line = int(items[8])
+            else:
+                manual_line = int(items[7])
             total_man += 1
         print line_id
-        if len(cur_date) > 0 and len(cur_seq) > 0 and len(cur_ed) > 0:
-            if num_manual > 0 and num_wit > 0:
-                if wit_line not in dict_split:
-                    dict_split[wit_line] = []
-                dict_split[wit_line].append((cur_date[0], cur_ed[0] + '-' + cur_seq[0], cur_begin, cur_end, line_id, manual_line, total_date_man_wit))
-                total_date_man_wit += 1
-            elif num_manual > 0:
-                if line_id not in dict_manual:
-                    dict_manual[line_id] = (cur_date[0], cur_ed[0] + '-' + cur_seq[0], cur_begin, cur_end, manual_line, total_date_man)
-                total_date_man += 1
-            elif num_wit > 0:
-                if wit_line not in dict_wit:
-                    dict_wit[wit_line] = []
-                dict_wit[wit_line].append((cur_date[0], cur_ed[0] + '-' + cur_seq[0], cur_begin, cur_end, line_id, total_date_wit))
-                total_date_wit += 1
+        if num_manual > 0 and num_wit > 0:
+            if wit_line not in dict_split:
+                dict_split[wit_line] = []
+            dict_split[wit_line].append((book, book_id, cur_begin, cur_end, line_id, manual_line, total_date_man_wit))
+            total_date_man_wit += 1
+        elif num_manual > 0:
+            if line_id not in dict_manual:
+                dict_manual[line_id] = (book, book_id, cur_begin, cur_end, manual_line, total_date_man)
+            total_date_man += 1
+        elif num_wit > 0:
+            if wit_line not in dict_wit:
+                dict_wit[wit_line] = []
+            dict_wit[wit_line].append((book, book_id, cur_begin, cur_end, line_id, total_date_wit))
+            total_date_wit += 1
         lid += 1
     save_obj(join(folder_multi, 'man_wit'), dict_split)
     save_obj(join(folder_multi, 'man'), dict_manual)
@@ -76,12 +74,10 @@ def write_manual():
     out_info = open(join(folder_multi, 'man.info.txt'), 'w')
     for line in file(join(folder_multi, 'pair.x')):
         if line_id in dict_manual:
-            for ele in replace_xml:
-                line = re.sub(ele, replace_xml[ele], line)
             if len(remove_nonascii(line).strip()) > 0:
                 cur_info = dict_manual[line_id]
                 manul_line = cur_info[4]
-                if len(remove_nonascii(pair_z[manul_line]).strip()) > 0 and '#' not in pair_z[manul_line]:
+                if len(remove_nonascii(pair_z[manul_line]).strip()) > 0:
                     out_x.write(line)
                     out_y.write(pair_z[manul_line] + '\n')
                     out_info.write('\t'.join(map(str, cur_info[:-2])) + '\n')
@@ -159,14 +155,8 @@ def write_man_wit():
                 total_id = info[6]
                 print x_id
                 cur_x = pair_x[x_id]
-                for ele in replace_xml:
-                    cur_x = re.sub(ele, replace_xml[ele], cur_x)
                 cur_z = pair_z[z_id]
-                for ele in replace_xml:
-                    cur_z = re.sub(ele, replace_xml[ele], cur_z)
-                if len(remove_nonascii(cur_x).strip()) > 0 and len(remove_nonascii(cur_z).strip()) > 0 and '#' not in cur_z:
-                    for ele in replace_xml:
-                        line = re.sub(ele, replace_xml[ele], line)
+                if len(remove_nonascii(cur_x).strip()) > 0 and len(remove_nonascii(cur_z).strip()) > 0:
                     list_x[total_id] = cur_x + '\t' + line.strip('\n')
                 else:
                     list_x[total_id] = ''
@@ -180,7 +170,6 @@ def write_man_wit():
         cur_x = list_x[i]
         cur_y = list_y[i]
         cur_info = list_info[i]
-        print cur_info
         if len(cur_x) > 0:
             out_x.write(cur_x + '\n')
             out_y.write(cur_y + '\n')
@@ -190,12 +179,12 @@ def write_man_wit():
     out_info.close()
 
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/multi'
+folder_multi = '/scratch/dong.r/Dataset/OCR/book'
 
 train_ratio = 0.8
 tid = 0
 sid = 0
-# split_data()
-# write_manual()
+split_data()
+write_manual()
 write_witness()
-# write_man_wit()
+write_man_wit()
