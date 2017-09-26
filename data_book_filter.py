@@ -44,3 +44,10 @@ with open(join(folder_out, arg_train + '.x.txt'), 'w') as f_:
             f_.write(line)
         line_id += 1
 
+if exists(join(folder_train, arg_train + '.info.txt')):
+    with open(join(folder_out, arg_train + '.info.txt'), 'w') as f_:
+        line_id = 0
+        for line in file(join(folder_train, arg_train + '.info.txt')):
+            if line_id in index_y:
+                f_.write(line)
+            line_id += 1
