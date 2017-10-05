@@ -1,0 +1,1 @@
+sh job_dec_pcrf.sh book/0/0/50/test_20/20/pcrf book/0_0_50_20/72k_5_20_6/model/train_new.72k.txt.nopipe.m-mAlign.1-2.delX.1-best.conYX.align.rl-align.marmot-5-20-0.5-6 book/0_0_50_20/72k_5_20_6/tmp 72k_5_20_6 dec_book_pcrf_new man_wit.test.txt 5000 ser-par-10g-2 bp

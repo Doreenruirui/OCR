@@ -41,8 +41,13 @@ from multiprocessing import Pool
 import pdb
 
 from flag import FLAGS
+import re
+
 
 reverse_vocab, vocab = None, None
+
+def remove_nonascii(text):
+    return re.sub(r'[^\x00-\x7F]', '', text)   
 
 
 def create_model(session, vocab_size, forward_only):
@@ -70,7 +75,7 @@ def padded(tokens, depth):
 def tokenize(sents, vocab, depth=FLAGS.num_layers):
     token_ids = []
     for sent in sents:
-        token_ids.append(nlc_data.sentence_to_token_ids(sent, vocab, get_tokenizer(FLAGS.tokenizer)))
+        token_ids.append(nlc_data.sentence_to_token_ids(remove_nonascii(sent), vocab, get_tokenizer(FLAGS.tokenizer)))
     token_ids = padded(token_ids, depth)
     source = np.array(token_ids).T
     source_mask = (source != 0).astype(np.int32)
@@ -163,7 +168,7 @@ def decode():
         line = lines[line_id]
         if flag_evl:
             cur_truth = truths[line_id]
-        sents = [ele for ele in line.strip('\n').split('\t')][:100]
+        sents = [ele for ele in line.strip('\n').split('\t')][:20]
         #sents = [ele.replace('-', '_') for ele in sents if len(ele.strip()) > 0]
         sents = [ele for ele in sents if len(ele.strip()) > 0]
         if len(sents) > 0:

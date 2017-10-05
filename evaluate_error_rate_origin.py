@@ -61,5 +61,5 @@ def evaluate_man_wit(folder_name, prefix='dev'):
 
 cur_folder = sys.argv[1]
 cur_prefix = sys.argv[2]
-#evaluate_man(cur_folder, cur_prefix, 30000)
-evaluate_man_wit(cur_folder, cur_prefix)
+evaluate_man(cur_folder, cur_prefix, -1)
+#evaluate_man_wit(cur_folder, cur_prefix)

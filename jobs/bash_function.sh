@@ -10,7 +10,10 @@ writejob(){ echo '#!/bin/bash' >> $1;
             echo '' >> $1;
             echo 'source /home/dong.r/.bashrc' >> $1;
             echo 'work=/home/dong.r/OCR/' >> $1;
+            #echo 'work=/home/dong.r/Package/coling2016-pcrf-seq2seq/src/' >> $1;
             echo 'cd $work' >> $1;
+            #echo 'work=/home/dong.r/OCR/' >> $1;
+            #echo 'cd $work' >> $1;
             }
 
 

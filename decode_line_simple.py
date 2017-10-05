@@ -37,11 +37,13 @@ import nlc_data
 from util import initialize_vocabulary, get_tokenizer
 from multiprocessing import Pool
 import pdb
-
+import re
 from flag import FLAGS
 
 reverse_vocab, vocab = None, None
 
+def remove_nonascii(text):                                                    
+    return re.sub(r'[^\x00-\x7F]', '', text)
 
 def create_model(session, vocab_size, forward_only):
     model = nlc_model.NLCModel(
@@ -60,7 +62,7 @@ def create_model(session, vocab_size, forward_only):
 
 def tokenize(sent, vocab, depth=FLAGS.num_layers):
     align = pow(2, depth - 1)
-    token_ids = nlc_data.sentence_to_token_ids(sent, vocab, get_tokenizer(FLAGS.tokenizer))
+    token_ids = nlc_data.sentence_to_token_ids(remove_nonascii(sent), vocab, get_tokenizer(FLAGS.tokenizer))
     ones = [1] * len(token_ids)
     pad = (align - len(token_ids)) % align
 

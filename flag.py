@@ -27,5 +27,8 @@ tf.app.flags.DEFINE_float("gpu_frac", 0.3, "GPU Fraction to be used.")
 tf.app.flags.DEFINE_integer("beam_size", 8, "Size of beam.")
 tf.app.flags.DEFINE_integer("start", 0, "Decode from.")
 tf.app.flags.DEFINE_integer("end", 0, "Decode to.")
+tf.app.flags.DEFINE_float("variance", 3, "The context window size for decoding")
+tf.app.flags.DEFINE_float("scalar", 3, "The scalar for sharpness of prior distribution")
+tf.app.flags.DEFINE_float("weight", 0.8, "The weight for the original distribution.")
 
 FLAGS = tf.app.flags.FLAGS
