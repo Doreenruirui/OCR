@@ -5,10 +5,9 @@ import json
 from collections import OrderedDict
 from multiprocessing import Pool
 import re
+import sys
 
 
-folder_data = '/home/dasmith/work/corpora/ia/tcp-books-p09-a20-pre1900.wits/witnesses.json'
-folder_out = '/scratch/dong.r/Dataset/OCR/book'
 replace_xml = {'&lt;': '<', '&gt;': '>', '&quot;': '"',  '&apos;': '\'', '&amp;': '&'}
 
 
@@ -49,7 +48,7 @@ def process_file(paras):
         cur_id = line['id']
         lines = line['lines']
         for item in lines:
-            begin =  item['begin']
+            begin = item['begin']
             text = item['text']
             for ele in replace_xml:
                 text = re.sub(ele, replace_xml[ele], text)
@@ -83,8 +82,6 @@ def process_file(paras):
                             wit_str += '\t' + wit_text.encode('utf-8')
                     else:
                         num_manul += 1
-                        # if num_manul > 1:
-                        #     print wit
                         if len(man_str) == 0:
                             man_info = str(wit_id) + '\t' + str(wit_begin)
                             man_str = wit_text.encode('utf-8')
@@ -100,7 +97,6 @@ def process_file(paras):
             out_x_info.write(str(cur_group) + '\t' + str(cur_line_no) + '\t' + str(cur_id) + '\t' + str(begin) + '\t' + str(len(text) + begin) + '\t' + str(num_wit) + '\t' + str(num_manul) + '\n')
             cur_line_no += 1
         cur_group += 1
-
     out_x.close()
     out_y.close()
     out_z.close()
@@ -182,6 +178,14 @@ def process_data():
     pool = Pool(100)
     pool.map(process_file, zip(list_file, list_out_file))
 
+
+data = sys.argv[1]
+if data == 'richmond':
+    folder_data = '/scratch/dong.r/Dataset/unprocessed/witnesses.json'
+    folder_out = '/scratch/dong.r/Dataset/OCR/richmond'
+elif data == 'book':
+    folder_data = '/home/dasmith/work/corpora/ia/tcp-books-p09-a20-pre1900.wits/witnesses.json'
+    folder_out = '/scratch/dong.r/Dataset/OCR/book'
 
 process_data()
 merge_file()

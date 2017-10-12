@@ -1,6 +1,6 @@
 import os
 from os.path import join as pjoin
-from levenshtein import align_pair, align_one2many, align_beam, align
+from levenshtein import align_pair, align_one2many, align_beam, align, count_pair
 from multiprocessing import Pool
 import numpy as np
 import re
@@ -53,6 +53,8 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
     nthread = 100
     pool = Pool(nthread)
     dis_by, best_str = align_beam(pool, list_y, list_dec, flag_char)
+    num_ins, num_del, num_rep = count_pair(pool, list_top, best_str)
+    # num_ins, num_del, num_rep = count_pair(pool, list_top, list_y)
     dis_ty = align_pair(pool, list_y,  list_top, flag_char)
     dis = np.asarray(zip(dis_by, dis_ty, len_y))
     if end == -1:
@@ -65,60 +67,20 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
             outfile = pjoin(folder_data, out_folder, prefix + '.ec.txt.' + str(start) + '_' + str(end))
         else:
             outfile = pjoin(folder_data, out_folder, prefix + '.ew.txt.' + str(start) + '_' + str(end))
+    with open(pjoin(folder_data, out_folder, prefix + '.op.txt.' + str(start) + '_' + str(end)), 'w') as f_:
+        f_.write('%d\t%d\t%d\n' % (num_ins, num_del, num_rep))
+    with open(pjoin(folder_data, out_folder, prefix + '.bs.txt.' + str(start) + '_' + str(end)), 'w') as f_:
+        for cur_str in list_top:
+            f_.write(cur_str + '\n')
     np.savetxt(outfile, dis, fmt='%d')
 
 
-def evaluate_man(folder_name, prefix='dev'):
-    global folder_data
-    cur_folder_data = pjoin(folder_data, folder_name)
-    with open(pjoin(cur_folder_data, prefix + '.x.txt'), 'r') as f_:
-        list_x = [ele.lower().strip() for ele in f_.readlines()]
-    with open(pjoin(cur_folder_data, prefix + '.y.txt'), 'r') as f_:
-        list_y = [ele.strip().lower() for ele in f_.readlines()]
-    len_yc = [len(y) for y in list_y]
-    pool = Pool(100)
-    dis_xy = align_pair(pool, list_x, list_y)
-    np.savetxt(pjoin(cur_folder_data, prefix + '.ec.txt'), np.asarray(zip(dis_xy, len_yc)), fmt='%d')
 
+cur_folder = sys.argv[1]
+cur_out = sys.argv[2]
+cur_prefix = sys.argv[3]
+beam = int(sys.argv[4])
+start_line = int(sys.argv[5])
+end_line = int(sys.argv[6])
+evaluate_multi(cur_folder, cur_out, cur_prefix, beam_size=beam, start=start_line, end=end_line, flag_char=1)
 
-def evaluate_man_wit(folder_name, prefix='dev'):
-    global folder_data
-    cur_folder_data = pjoin(folder_data, folder_name)
-    with open(pjoin(cur_folder_data, prefix + '.y.txt'), 'r') as f_:
-        list_y = [ele.strip().lower() for ele in f_.readlines()]
-    list_x = []
-    num = []
-    list_y_new = []
-    with open(pjoin(cur_folder_data, prefix + '.x.txt'), 'r') as f_:
-        line_id = 0
-        for line in f_.readlines():
-            cur_line = line.lower().strip('\n').split('\t')[:100]
-            cur_line = [ele.strip() for ele in cur_line if len(ele.strip()) > 0]
-            list_x += cur_line
-            num.append(len(cur_line))
-            list_y_new += [list_y[line_id] for _ in cur_line]
-            line_id += 1
-    pool = Pool(100)
-    dis_xy = align_pair(pool, list_x, list_y_new)
-    line_id = 0
-    with open(pjoin(cur_folder_data, prefix + '.ec.txt'), 'w') as f_:
-        for i in range(len(list_y)):
-            new_line_id = line_id + num[i]
-            cur_dis = dis_xy[line_id: new_line_id]
-            f_.write('\t'.join(map(str, cur_dis)) + '\t' + str(len(list_y[i])) + '\n')
-            line_id = new_line_id
-
-
-if True:
-    cur_folder = sys.argv[1]
-    cur_out = sys.argv[2]
-    cur_prefix = sys.argv[3]
-    beam = int(sys.argv[4])
-    start_line = int(sys.argv[5])
-    end_line = int(sys.argv[6])
-    evaluate_multi(cur_folder, cur_out, cur_prefix, beam_size=beam, start=start_line, end=end_line, flag_char=1)
-else:
-    cur_folder = sys.argv[1]
-    cur_prefix = sys.argv[2]
-    evaluate_man(cur_folder, cur_prefix)
-    #evaluate_man_wit(cur_folder, cur_prefix)

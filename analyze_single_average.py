@@ -1,6 +1,6 @@
 import os
 from os.path import join as pjoin
-from levenshtein import align_pair, align_one2many, align_beam, align
+from levenshtein import align_pair, align_one2many, align_beam, align, count_pair
 from multiprocessing import Pool
 import numpy as np
 import re
@@ -53,6 +53,8 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
     nthread = 100
     pool = Pool(nthread)
     dis_by, best_str = align_beam(pool, list_y, list_dec, flag_char)
+    num_ins, num_del, num_rep = count_pair(pool, list_top, best_str)
+    # num_ins, num_del, num_rep = count_pair(pool, list_top, list_y)
     dis_ty = align_pair(pool, list_y,  list_top, flag_char)
     dis = np.asarray(zip(dis_by, dis_ty, len_y))
     if end == -1:
@@ -65,7 +67,10 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
             outfile = pjoin(folder_data, out_folder, prefix + '.ec.txt.' + str(start) + '_' + str(end))
         else:
             outfile = pjoin(folder_data, out_folder, prefix + '.ew.txt.' + str(start) + '_' + str(end))
+    with open(pjoin(folder_data, out_folder, prefix + 'op.txt.' + str(start) + '_' + str(end)), 'w') as f_:
+        f_.write('%d\t%d\t%d\n' % (num_ins, num_del, num_rep))
     np.savetxt(outfile, dis, fmt='%d')
+
 
 
 cur_folder = sys.argv[1]
@@ -75,3 +80,4 @@ beam = int(sys.argv[4])
 start_line = int(sys.argv[5])
 end_line = int(sys.argv[6])
 evaluate_multi(cur_folder, cur_out, cur_prefix, beam_size=beam, start=start_line, end=end_line, flag_char=1)
+

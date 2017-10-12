@@ -283,7 +283,7 @@ def align_beam(P, truth, cands, flag_char=1):
     global output, output_str
     ndata = len(truth)
     list_dis = [0 for _ in range(ndata)]
-    list_str = [[] for _ in range(ndata)]
+    list_str = ['' for _ in range(ndata)]
     list_index = np.arange(ndata).tolist()
     list_flag = [flag_char for _ in range(ndata)]
     paras = zip(list_index, truth, cands, list_flag)

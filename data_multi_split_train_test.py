@@ -45,6 +45,8 @@ def get_all_date():
 def split_train_test(train_ratio, split_id):
     dict_date = load_obj(join(folder_multi, 'date_info'))
     folder_split = join(folder_multi, str(split_id))
+    if not exists(folder_split):
+        os.makedirs(folder_split)
     date_list = dict_date.keys()
     num_file = len(date_list)
     index_train, index_test = split_with_ratio(num_file, train_ratio)
@@ -141,34 +143,34 @@ def split_date(train_id, split_id):
     print len(dict_date['train']) + len(dict_date['test']) + len(dict_date['dev'])
     index = {}
     for train in ['train', 'test', 'dev']:
-        for man in ['wit']:
-        # for man in ['man', 'man_wit', 'wit']:
+        #for man in ['wit']:
+        for man in ['man', 'man_wit']:
             index[(train, man)] = get_index(train, man)
-    # for man in ['man', 'man_wit', 'wit']:
-    for man in ['wit']:
+    for man in ['man', 'man_wit']:
+    #for man in ['wit']:
         for train in ['train', 'test', 'dev']:
             print len(index[(train, man)])
     list_file = {}
     input_file = {}
-    # for man in ['man', 'man_wit', 'wit']:
-    for man in ['wit']:
-        for postfix in ['x']:
-        # for postfix in ['x', 'y']:
+    for man in ['man', 'man_wit']:
+    #for man in ['wit']:
+        #for postfix in ['x']:
+        for postfix in ['x', 'y']:
             list_file[(man, 'test', postfix)] = join(folder_test, man + '.test.' + postfix + '.txt')
             for prefix in ['train', 'dev']:
                 list_file[(man, prefix, postfix)] = join(folder_train, man + '.' + prefix + '.' + postfix + '.txt')
             input_file[(man, postfix)] = join(folder_multi,  man +'.' + postfix + '.txt')
-    # for man in ['man', 'man_wit', 'wit']:
-    for man in ['wit']:
+    for man in ['man', 'man_wit']:
+    #for man in ['wit']:
         list_file[(man, 'test', 'info')] = join(folder_test, man + '.test.' + 'info.txt')
         for prefix in ['train', 'dev']:
             list_file[(man, prefix, 'info')] = join(folder_train, man + '.' + prefix + '.' + 'info.txt')
         input_file[(man, 'info')] = join(folder_multi, man + '.info.txt')
-    # for man in ['man', 'man_wit', 'wit']:
-    for man in ['wit']:
+    for man in ['man', 'man_wit']:
+    #for man in ['wit']:
         for prefix in ['train', 'test', 'dev']:
-            for postfix in ['x']:
-            # for postfix in ['x', 'y']:
+            #for postfix in ['x']:
+            for postfix in ['x', 'y']:
                 write_data(index[prefix, man], input_file[(man, postfix)], list_file[(man, prefix, postfix)])
             write_data(index[prefix, man], input_file[(man, 'info')], list_file[(man, prefix, 'info')])
 
@@ -192,7 +194,8 @@ def compute_error_rate(train_id, split_id):
 
 def get_train_data(train_id, split_id, error_ratio, train):
     folder_train = join(folder_multi, str(train_id), str(split_id))
-    folder_error = join(folder_train, str(error_ratio))
+    #folder_error = join(folder_train, str(error_ratio))
+    folder_error = join(folder_train, 'all')                      
     if not exists(folder_error):
         os.makedirs(folder_error)
     list_x = []
@@ -210,14 +213,14 @@ def get_train_data(train_id, split_id, error_ratio, train):
         list_info.append(line)
     for line in file(join(folder_train, 'man_wit.' + train + '.info.txt')):
         list_info.append(line)
-    dis = np.loadtxt(join(folder_train, 'distance'))
-    if train == 'train':
-        index = []
-        for i in range(len(list_x)):
-            if dis[i] * 1. / len(list_y[i]) <= error_ratio * 0.01:
-                index.append(i)
-    else:
-        index = np.arange(len(list_x))
+    #dis = np.loadtxt(join(folder_train, 'distance'))
+    #if train == 'train':
+    #    index = []
+    #    for i in range(len(list_x)):
+    #        if dis[i] * 1. / len(list_y[i]) <= error_ratio * 0.01:
+    #            index.append(i)
+    #else:
+    index = np.arange(len(list_x))
     out_x = open(join(folder_error, train + '.x.txt'), 'w')
     out_y = open(join(folder_error, train + '.y.txt'), 'w')
     out_info = open(join(folder_error, train +  '.info.txt'), 'w')
@@ -229,20 +232,20 @@ def get_train_data(train_id, split_id, error_ratio, train):
     out_y.close()
     out_info.close()
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/multi'
+folder_multi = '/scratch/dong.r/Dataset/OCR/richmond'
 # check_manual()
-# get_all_date()
-# split_train_test(0.8, 0)
-# split_train_dev(0.8, 0, 0)
+get_all_date()
+#split_train_test(0.8, 0)
+#split_train_dev(0.8, 0, 0)
 cur_test_id =  int(sys.argv[1])
 cur_train_id = int(sys.argv[2])
 cur_error = int(sys.argv[3])
 #split_train_test(0.8, cur_test_id)
 #split_train_dev(0.8, cur_test_id, cur_train_id)
-#print ('Splitting Data')
+print ('Splitting Data')
 split_date(cur_test_id, cur_train_id)
 #print ('Computing Error Rate')
 #compute_error_rate(cur_test_id, cur_train_id)
-# print ('Get Training and Dev data')
-# get_train_data(cur_test_id, cur_train_id, cur_error, 'train')
-# get_train_data(cur_test_id, cur_train_id, cur_error, 'dev')
+print ('Get Training and Dev data')
+get_train_data(cur_test_id, cur_train_id, cur_error, 'train')
+get_train_data(cur_test_id, cur_train_id, cur_error, 'dev')
