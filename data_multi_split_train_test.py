@@ -106,30 +106,7 @@ def split_date(train_id, split_id):
         line_id = 0
         for line in file(input_file):
             if line_id in index:
-                if 'wit' in output_file and '.x' in output_file:
-                    new_line = []
-                    for item in line.strip('\n').split('\t'):
-                        cur_item = ' '.join([ele for ele in item.split(' ') if len(ele.strip()) > 0])
-                        new_line.append(cur_item)
-                    out_file.write('\t'.join(new_line) + '\n')
-                elif '.x' in output_file:
-                    out_file.write(line.strip() + '\n')
-                elif '.y' in output_file:
-                    line = line.strip('\n').replace('\t', ' ')
-                    flag_begin = 0
-                    flag_end = 0
-                    if len(line[0].strip()) == 0:
-                        flag_begin = 1
-                    if len(line[-1].strip()) == 0:
-                        flag_end = 1
-                    cur_line = ' '.join([ele for ele in line.split(' ') if len(ele.strip()) > 0])
-                    if flag_begin:
-                        cur_line = ' ' + cur_line
-                    if flag_end:
-                        cur_line += ' '
-                    out_file.write(cur_line + '\n')
-                else:
-                    out_file.write(line)
+                out_file.write(line)
             line_id += 1
         out_file.close()
     folder_test = join(folder_multi, str(train_id))
@@ -232,7 +209,7 @@ def get_train_data(train_id, split_id, error_ratio, train):
     out_y.close()
     out_info.close()
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/richmond'
+folder_multi = '/scratch/dong.r/Dataset/OCR/richmond/single'
 # check_manual()
 get_all_date()
 #split_train_test(0.8, 0)
@@ -242,9 +219,9 @@ cur_train_id = int(sys.argv[2])
 cur_error = int(sys.argv[3])
 #split_train_test(0.8, cur_test_id)
 #split_train_dev(0.8, cur_test_id, cur_train_id)
-print ('Splitting Data')
+# print ('Splitting Data')
 split_date(cur_test_id, cur_train_id)
-#print ('Computing Error Rate')
+# print ('Computing Error Rate')
 #compute_error_rate(cur_test_id, cur_train_id)
 print ('Get Training and Dev data')
 get_train_data(cur_test_id, cur_train_id, cur_error, 'train')

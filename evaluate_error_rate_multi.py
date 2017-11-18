@@ -5,6 +5,8 @@ from multiprocessing import Pool
 import numpy as np
 import re
 import sys
+import string
+
 
 # folder_data = '/Users/doreen/Documents/Experiment/dataset/OCR/'
 folder_data = '/scratch/dong.r/Dataset/OCR'
@@ -34,6 +36,8 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
     for line in file(file_name):
         line_id += 1
         cur_str = line.strip().lower()
+        cur_str = cur_str.translate(None, string.punctuation)
+        cur_str = ' '.join([ele for ele in cur_str.split(' ') if len(ele) > 0])
         if line_id % beam_size == 1:
             if len(list_beam) == beam_size:
                 list_dec.append(list_beam)
@@ -41,10 +45,16 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
             list_top.append(cur_str)
         list_beam.append(cur_str)
     list_dec.append(list_beam)
+    
     if end == -1:
         end = len(list_dec)
     with open(pjoin(folder_data, prefix + '.y.txt'), 'r') as f_:
-        list_y = [ele.strip().lower() for ele in f_.readlines()][start:end]
+        list_y_old = [ele.strip().lower() for ele in f_.readlines()][start:end]
+        list_y = []
+        for ele in list_y_old:
+            ele = ele.translate(None, string.punctuation)
+            ele = ' '.join([item for item in ele.split(' ') if len(item) > 0])
+            list_y.append(ele)
     if flag_char:
         len_y = [len(y) for y in list_y]
     else:
@@ -53,7 +63,6 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
     nthread = 100
     pool = Pool(nthread)
     dis_by, best_str = align_beam(pool, list_y, list_dec, flag_char)
-    num_ins, num_del, num_rep = count_pair(pool, list_top, best_str)
     # num_ins, num_del, num_rep = count_pair(pool, list_top, list_y)
     dis_ty = align_pair(pool, list_y,  list_top, flag_char)
     dis = np.asarray(zip(dis_by, dis_ty, len_y))
@@ -67,11 +76,13 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
             outfile = pjoin(folder_data, out_folder, prefix + '.ec.txt.' + str(start) + '_' + str(end))
         else:
             outfile = pjoin(folder_data, out_folder, prefix + '.ew.txt.' + str(start) + '_' + str(end))
-    with open(pjoin(folder_data, out_folder, prefix + '.op.txt.' + str(start) + '_' + str(end)), 'w') as f_:
-        f_.write('%d\t%d\t%d\n' % (num_ins, num_del, num_rep))
-    with open(pjoin(folder_data, out_folder, prefix + '.bs.txt.' + str(start) + '_' + str(end)), 'w') as f_:
+    with open(pjoin(folder_data, out_folder, prefix + '.top.txt.' + str(start) + '_' + str(end)), 'w') as f_:
         for cur_str in list_top:
             f_.write(cur_str + '\n')
+    with open(pjoin(folder_data, out_folder, prefix + '.bs.txt.' + str(start) + '_' + str(end)), 'w') as f_:
+        for cur_str in best_str:
+            f_.write(cur_str + '\n')
+
     np.savetxt(outfile, dis, fmt='%d')
 
 

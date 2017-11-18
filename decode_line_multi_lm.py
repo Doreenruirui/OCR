@@ -21,7 +21,7 @@ import time
 import numpy as np
 from os.path import join as pjoin
 from multiprocessing import Pool
-from util_lm import score_sent, initialize_score
+from util_lm_kenlm import score_sent, initialize
 from levenshtein import align_pair, align
 
 
@@ -40,8 +40,8 @@ def remove_nonascii(text):
 
 
 def rank_sent(pool, sents):
-    res1 = score_sent([0, remove_nonascii(sents[0])])
-    res2 = score_sent([0, remove_nonascii(sents[1])])
+    #res1 = score_sent([0, remove_nonascii(sents[0])])
+    #res2 = score_sent([0, remove_nonascii(sents[1])])
     new_sents = [remove_nonascii(ele) for ele in sents]
     #print(res1, res2)
     probs = np.ones(len(sents)) * -1
@@ -70,12 +70,12 @@ def decode():
         truths = [ele.strip().lower() for ele in f_.readlines()]
     f_o = open(pjoin(folder_out, dev + '.' + str(lm_name) + '.' + 'ec.txt.' + str(start) + '_' + str(end)), 'w')
     f_b = open(pjoin(folder_out, dev + '.' + str(lm_name) + '.' + 'o.txt.' + str(start) + '_' + str(end)), 'w')
-    pool = Pool(100, initializer=initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir)))
-    initialize_score(pjoin(folder_data, 'voc'), pjoin(folder_data, 'lm/char', lm_dir))
+    pool = Pool(100, initializer=initialize(pjoin(folder_data, 'lm/char', lm_dir)))
+    initialize(pjoin(folder_data, 'lm/char', lm_dir))
     for line_id in range(start, end):
         line = lines[line_id]
         cur_truth = truths[line_id]
-        sents = [ele for ele in line.strip('\n').split('\t')][:100]
+        sents = [ele for ele in line.strip('\n').split('\t')][:20]
         sents = [ele.strip() for ele in sents if len(ele.strip()) > 0]
         if len(sents) > 0:
             if 'low' in lm_dir:

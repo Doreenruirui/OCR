@@ -36,6 +36,13 @@ from tensorflow.python.ops.math_ops import tanh
 
 import nlc_data
 
+def _sequence_mask(lens, max_len):
+    len_t = tf.expand_dims(lens, 1)
+    range_t = tf.range(0, max_len, 1)
+    range_row = tf.expand_dims(range_t, 0)
+    mask = tf.less(range_row, len_t)
+    return mask
+
 def get_optimizer(opt):
     if opt == "adam":
         optfn = tf.train.AdamOptimizer
@@ -45,36 +52,146 @@ def get_optimizer(opt):
         assert(False)
     return optfn
 
+
 class GRUCellAttn(rnn_cell.GRUCell):
-    def __init__(self, num_units, encoder_output, scope=None):
+    def __init__(self, num_units, encoder_output, len_all, len_in, sigma=5, scope=None):
         self.hs = encoder_output
         with vs.variable_scope(scope or type(self).__name__):
             with vs.variable_scope("Attn1"):
                 hs2d = tf.reshape(self.hs, [-1, num_units])
                 phi_hs2d = tanh(rnn_cell._linear(hs2d, num_units, True, 1.0))
                 self.phi_hs = tf.reshape(phi_hs2d, tf.shape(self.hs))
-        super(GRUCellAttn, self).__init__(num_units)
+        self.sigma = sigma
+        self.len_all = len_all
+        self.len_in = len_in
+        super(GRUCellAttn, self).__init__(num_units + 1)
 
     def __call__(self, inputs, state, scope=None):
-        gru_out, gru_state = super(GRUCellAttn, self).__call__(inputs, state, scope)
+        true_state = tf.slice(state, [0, 0], [-1, self._num_units - 1])
+        time_step = tf.slice(state, [0, self._num_units - 1], [-1, 1])
+        batch_size = tf.shape(self.phi_hs)[1]
+        # gru_out, gru_state = super(GRUCellAttn, self).__call__(inputs, true_state, scope)
         with vs.variable_scope(scope or type(self).__name__):
+            with vs.variable_scope("Gates"):  # Reset gate and update gate.
+                r, u = array_ops.split(1, 2,
+                                       rnn_cell._linear([inputs, true_state],
+                                                        2 * (self._num_units - 1), True, 1.0))
+                r, u = sigmoid(r), sigmoid(u)
+            with vs.variable_scope("Candidate"):
+                c = self._activation(rnn_cell._linear([inputs, r * true_state],
+                                             self._num_units - 1, True))
+                gru_out = u * true_state + (1 - u) * c
+            with vs.variable_scope('Step'):
+                move_step = tanh(rnn_cell._linear(gru_out, self._num_units - 1, True, 1.0))
+                with vs.variable_scope('Step2'):
+                    move_step = tf.exp(rnn_cell._linear(move_step, 1, True, 1.0))
+            time_step = time_step + move_step
+            start = tf.maximum(0., time_step - 2 * self.sigma)
+            start = tf.cast(tf.minimum(tf.floor(start),
+                                       tf.cast(tf.reshape(self.len_all - 1, [-1,1]),
+                                               tf.float32)),
+                            tf.int32)
+            end = tf.cast(tf.ceil(tf.minimum(time_step + 2 * self.sigma + 1, tf.cast(tf.reshape(self.len_all, [-1,1]), tf.float32))),
+                              dtype=tf.int32)
+            min_start = tf.reduce_min(start)
+            max_end = tf.reduce_max(end)
+            mask1 = _sequence_mask(tf.reshape(start, [-1]), self.len_in)
+            mask2 = _sequence_mask(tf.reshape(end, [-1]), self.len_in)
+            mask = tf.logical_xor(mask1, mask2)
+            mask_seg = tf.slice(mask, [0, min_start], [-1, max_end - min_start], name='slice1')
+            with vs.variable_scope('Prior'):
+                lam = tanh(rnn_cell._linear(gru_out, self._num_units - 1, True, 1.0))
+                with vs.variable_scope('Prior2'):
+                    lam = tf.exp(rnn_cell._linear(lam, 1, True, 1.0))
+            range_all = tf.cast(tf.range(0, self.len_in, 1) * tf.cast(mask, tf.int32), tf.float32)
+            range_seg = tf.slice(range_all, [0, min_start], [-1, max_end - min_start], name='slice2')
+            prior_weight = tf.cast(mask_seg, tf.float32) * lam * tf.exp(-tf.square(range_seg - time_step)
+                                                                            / 2 * self.sigma * self.sigma)
+            prior_weight = tf.reshape(tf.transpose(prior_weight), [-1, batch_size, 1])
             with vs.variable_scope("Attn2"):
-                gamma_h = tanh(rnn_cell._linear(gru_out, self._num_units, True, 1.0))
-            weights = tf.reduce_sum(self.phi_hs * gamma_h, reduction_indices=2, keep_dims=True)
-            weights = tf.exp(weights - tf.reduce_max(weights, reduction_indices=0, keep_dims=True))
-            weights = weights / (1e-6 + tf.reduce_sum(weights, reduction_indices=0, keep_dims=True))
-            context = tf.reduce_sum(self.hs * weights, reduction_indices=0)
+                gamma_h = tanh(rnn_cell._linear(gru_out, self._num_units - 1, True, 1.0))
+            phi_hs_seg = tf.slice(self.phi_hs, [min_start, 0, 0], [max_end - min_start, -1, -1], name='slice3')
+            mask_trans = tf.reshape(tf.transpose(tf.cast(mask_seg, tf.float32)), [-1, batch_size, 1])
+            weights_seg = tf.reduce_sum(phi_hs_seg * gamma_h, reduction_indices=2, keep_dims=True) * mask_trans
+            weights_seg = tf.exp(
+                    weights_seg - tf.reduce_max(weights_seg, reduction_indices=0, keep_dims=True)) * mask_trans
+            context_weight = weights_seg / (1e-6 + tf.reduce_sum(weights_seg, reduction_indices=0, keep_dims=True))
+            weights = prior_weight * context_weight
+            context = tf.reshape(tf.reduce_sum(phi_hs_seg * weights, reduction_indices=0), [-1, self._num_units - 1])
             with vs.variable_scope("AttnConcat"):
-                out = tf.nn.relu(rnn_cell._linear([context, gru_out], self._num_units, True, 1.0))
-            self.attn_map = tf.squeeze(tf.slice(weights, [0, 0, 0], [-1, -1, 1]))
+                    out = tf.nn.relu(rnn_cell._linear([context, gru_out], self._num_units - 1, True, 1.0))
+                # self.attn_map = tf.squeeze(tf.slice(weights, [0, 0, 0], [-1, -1, 1]))
+            out = tf.concat(1, [out, time_step])
+            return (out, out)
+
+    def deocde(self, inputs, state, scope=None):
+        batch_size = tf.shape(inputs)[0]
+        len_all = tf.tile(self.len_all, [batch_size])
+        phi_hs = tf.tile(self.phi_hs, [1, batch_size, 1])
+        true_state = tf.slice(state, [0, 0], [-1, self._num_units - 1])
+        time_step = tf.slice(state, [0, self._num_units - 1], [-1, 1])
+        # gru_out, gru_state = super(GRUCellAttn, self).__call__(inputs, true_state, scope)
+        with vs.variable_scope(scope or type(self).__name__, reuse=True):
+            with vs.variable_scope("Gates", reuse=True):  # Reset gate and update gate.
+                r, u = array_ops.split(1, 2,
+                                       rnn_cell._linear([inputs, true_state],
+                                                        2 * (self._num_units - 1), True, 1.0))
+                r, u = sigmoid(r), sigmoid(u)
+            with vs.variable_scope("Candidate", reuse=True):
+                c = self._activation(rnn_cell._linear([inputs, r * true_state],
+                                             self._num_units - 1, True))
+
+                gru_out = u * true_state + (1 - u) * c
+            with vs.variable_scope('Step', reuse=True):
+                move_step = tanh(rnn_cell._linear(gru_out, self._num_units - 1, True, 1.0))
+                with vs.variable_scope('Step2', reuse=True):
+                    move_step = tf.exp(rnn_cell._linear(move_step, 1, True, 1.0))
+            time_step = time_step + move_step
+            start = tf.maximum(0., time_step - 2 * self.sigma)
+            start = tf.cast(tf.minimum(tf.floor(start),
+                                       tf.cast(tf.reshape(len_all - 1, [-1,1]),
+                                               tf.float32)),
+                            tf.int32)
+            end = tf.cast(tf.ceil(tf.minimum(time_step + 2 * self.sigma + 1, tf.cast(tf.reshape(len_all, [-1,1]), tf.float32))),
+                              dtype=tf.int32)
+            min_start = tf.reduce_min(start)
+            max_end = tf.reduce_max(end)
+            mask1 = _sequence_mask(tf.reshape(start, [-1]), self.len_in)
+            mask2 = _sequence_mask(tf.reshape(end, [-1]), self.len_in)
+            mask = tf.logical_xor(mask1, mask2)
+            mask_seg = tf.slice(mask, [0, min_start], [-1, max_end - min_start], name='slice1')
+            with vs.variable_scope('Prior', reuse=True):
+                lam = tanh(rnn_cell._linear(gru_out, self._num_units - 1, True, 1.0))
+                with vs.variable_scope('Prior2', reuse=True):
+                    lam = tf.exp(rnn_cell._linear(lam, 1, True, 1.0))
+            range_all = tf.cast(tf.range(0, self.len_in, 1) * tf.cast(mask, tf.int32), tf.float32)
+            range_seg = tf.slice(range_all, [0, min_start], [-1, max_end - min_start], name='slice2')
+            prior_weight = tf.cast(mask_seg, tf.float32) * lam * tf.exp(-tf.square(range_seg - time_step)
+                                                                            / 2 * self.sigma * self.sigma)
+            prior_weight = tf.reshape(tf.transpose(prior_weight), [-1, batch_size, 1])
+            with vs.variable_scope("Attn2", reuse=True):
+                gamma_h = tanh(rnn_cell._linear(gru_out, self._num_units - 1, True, 1.0))
+            phi_hs_seg = tf.slice(phi_hs, [min_start, 0, 0], [max_end - min_start, -1, -1], name='slice3')
+            mask_trans = tf.reshape(tf.transpose(tf.cast(mask_seg, tf.float32)), [-1, batch_size, 1])
+            weights_seg = tf.reduce_sum(phi_hs_seg * gamma_h, reduction_indices=2, keep_dims=True) * mask_trans
+            weights_seg = tf.exp(
+                    weights_seg - tf.reduce_max(weights_seg, reduction_indices=0, keep_dims=True)) * mask_trans
+            context_weight = weights_seg / (1e-6 + tf.reduce_sum(weights_seg, reduction_indices=0, keep_dims=True))
+            weights = prior_weight * context_weight
+            context = tf.reshape(tf.reduce_sum(phi_hs_seg * weights, reduction_indices=0), [-1, self._num_units - 1])
+            with vs.variable_scope("AttnConcat", reuse=True):
+                    out = tf.nn.relu(rnn_cell._linear([context, gru_out], self._num_units - 1, True, 1.0))
+                # self.attn_map = tf.squeeze(tf.slice(weights, [0, 0, 0], [-1, -1, 1]))
+            out = tf.concat(1, [out, time_step])
             return (out, out)
 
 
 class NLCModel(object):
-    def __init__(self, vocab_size, size, num_layers, max_gradient_norm, batch_size, learning_rate,
+    def __init__(self, vocab_size, size, sigma, num_layers, max_gradient_norm, batch_size, learning_rate,
                  learning_rate_decay_factor, dropout, forward_only=False, optimizer="adam"):
 
         self.size = size
+        self.sigma = sigma
         self.vocab_size = vocab_size
         self.batch_size = batch_size
         self.num_layers = num_layers
@@ -91,7 +208,6 @@ class NLCModel(object):
         self.beam_size = tf.placeholder(tf.int32)
         self.target_length = tf.reduce_sum(self.target_mask, reduction_indices=0)
         self.len_input = tf.placeholder(tf.int32)
-
         self.decoder_state_input, self.decoder_state_output = [], []
         for i in xrange(num_layers):
             self.decoder_state_input.append(tf.placeholder(tf.float32, shape=[None, size]))
@@ -139,10 +255,15 @@ class NLCModel(object):
                     inp = self.dropout(dropin)
             self.encoder_output = out
 
+
     def setup_decoder(self):
         if self.num_layers > 1:
             self.decoder_cell = rnn_cell.GRUCell(self.size)
-        self.attn_cell = GRUCellAttn(self.size, self.encoder_output, scope="DecoderAttnCell")
+        self.attn_cell = GRUCellAttn(self.size, self.encoder_output,
+                                     len_in=self.len_input,
+                                     len_all=tf.reduce_sum(self.source_mask, reduction_indices=0),
+                                     sigma=self.sigma,
+                                     scope="DecoderAttnCell")
 
         with vs.variable_scope("Decoder"):
             inp = self.decoder_inputs
@@ -155,13 +276,18 @@ class NLCModel(object):
                     self.decoder_state_output.append(state_output)
 
             with vs.variable_scope("DecoderAttnCell") as scope:
+                cur_init_state = tf.concat(1, [self.decoder_state_input[i + 1], tf.zeros((tf.shape(self.decoder_state_input[i + 1])[0], 1))])
                 out, state_output = rnn.dynamic_rnn(self.attn_cell, inp, time_major=True,
                                                     dtype=dtypes.float32, sequence_length=self.target_length,
-                                                    scope=scope, initial_state=self.decoder_state_input[i+1])
+                                                    scope=scope, initial_state=cur_init_state)
+                self.out_time = tf.slice(out, [0, 0, self.size], [-1, -1, 1])
+                out = tf.slice(out, [0, 0, 0], [-1, -1, self.size])
+                state_output = tf.slice(state_output, [0, 0], [-1, self.size])
                 self.decoder_output = self.dropout(out)
                 self.decoder_state_output.append(state_output)
 
-    def decoder_graph(self, decoder_inputs, decoder_state_input):
+
+    def decoder_graph(self, decoder_inputs, decoder_state_input, time_step):
         decoder_output, decoder_state_output = None, []
         inp = decoder_inputs
 
@@ -172,10 +298,16 @@ class NLCModel(object):
                     decoder_state_output.append(state_output)
 
             with vs.variable_scope("DecoderAttnCell") as scope:
-                decoder_output, state_output = self.attn_cell(inp, decoder_state_input[i+1])
-                decoder_state_output.append(state_output)
+                cur_init_state = tf.concat(1, [decoder_state_input[i + 1], time_step])
+                decoder_output, state_output = self.attn_cell.deocde(inp, cur_init_state)
+                # decoder_output, state_output = self.attn_cell(inp, decoder_state_input[i+1])
+                new_time_step = tf.slice(state_output, [0, self.size], [-1, 1])
+                state_output = tf.slice(state_output, [0, 0], [-1, self.size])
+                decoder_output = tf.slice(decoder_output, [0, 0], [-1, self.size])
 
-        return decoder_output, decoder_state_output
+                decoder_state_output.append(state_output)
+        return decoder_output, decoder_state_output, new_time_step
+
 
     def setup_beam(self):
         time_0 = tf.constant(0)
@@ -188,16 +320,18 @@ class NLCModel(object):
 
         state_0 = tf.zeros([1, self.size])
         states_0 = [state_0] * self.num_layers
+        time_step_0 = tf.constant([[0.]])
+        beam_step_0 = tf.constant([[0.]])
+        cand_step_0 = tf.constant([[0.]])
 
-
-        def beam_cond(cand_probs, cand_seqs, time, beam_probs, beam_seqs, cand_seq_prob, beam_seq_prob, *states):
+        def beam_cond(cand_probs, cand_seqs, time, time_step, beam_steps, cand_steps, beam_probs, beam_seqs, cand_seq_prob, beam_seq_prob, *states):
             return tf.logical_and(tf.reduce_max(beam_probs) >= tf.reduce_min(cand_probs), time < tf.reshape(self.len_input, ()) + 10)
 
-        def beam_step(cand_probs, cand_seqs, time, beam_probs, beam_seqs, cand_seq_prob, beam_seq_prob, *states):
+        def beam_step(cand_probs, cand_seqs, time, time_step, beam_steps, cand_steps, beam_probs, beam_seqs, cand_seq_prob, beam_seq_prob, *states):
             batch_size = tf.shape(beam_probs)[0]
             inputs = tf.reshape(tf.slice(beam_seqs, [0, time], [batch_size, 1]), [batch_size])
             decoder_input = embedding_ops.embedding_lookup(self.L_dec, inputs)
-            decoder_output, state_output = self.decoder_graph(decoder_input, states)
+            decoder_output, state_output, new_time_step = self.decoder_graph(decoder_input, states, time_step)
 
             with vs.variable_scope("Logistic", reuse=True):
                 do2d = tf.reshape(decoder_output, [-1, self.size])
@@ -221,65 +355,65 @@ class NLCModel(object):
             next_states = [tf.gather(state, next_bases) for state in state_output]
             next_beam_seqs = tf.concat(1, [tf.gather(beam_seqs, next_bases),
                                            tf.reshape(next_mods, [-1, 1])])
+            next_time_step = tf.gather(new_time_step, next_bases)
+            next_beam_steps = tf.concat(1, [tf.gather(beam_steps, next_bases), next_time_step])
+
+            cand_step_pad = tf.pad(cand_steps, [[0, 0], [0, 1]])
+            beam_step_EOS = tf.pad(beam_steps, [[0, 0], [0, 1]])
+            new_cand_steps = tf.concat(0, [cand_step_pad, beam_step_EOS])
 
             cand_seqs_pad = tf.pad(cand_seqs, [[0, 0], [0, 1]])
             beam_seqs_EOS = tf.pad(beam_seqs, [[0, 0], [0, 1]])
             new_cand_seqs = tf.concat(0, [cand_seqs_pad, beam_seqs_EOS])
             EOS_probs = tf.slice(total_probs, [0, nlc_data.EOS_ID], [batch_size, 1])
-
-
             new_cand_len = tf.reduce_sum(tf.cast(tf.greater(tf.abs(new_cand_seqs), 0), tf.int32), reduction_indices=1)
             new_cand_probs = tf.concat(0, [cand_probs, tf.reshape(EOS_probs, [-1])])
             new_cand_probs = tf.select(tf.greater(self.len_input - 10, new_cand_len),
-                                       tf.ones_like(new_cand_probs) * -3e38,
-                                       new_cand_probs)
-
-
+                                      tf.ones_like(new_cand_probs) * -3e38,
+                                      new_cand_probs)
             cand_k = tf.minimum(tf.size(new_cand_probs), self.beam_size)
             next_cand_probs, next_cand_indices = tf.nn.top_k(new_cand_probs, k=cand_k)
             next_cand_seqs = tf.gather(new_cand_seqs, next_cand_indices)
+            next_cand_steps = tf.gather(new_cand_steps, next_cand_indices)
 
             new_beam_seq_prob = tf.reshape(tf.gather(beam_seq_prob, next_bases), [beam_k, -1])
             cur_seq_prob = tf.reshape(tf.gather(flat_log_probs, top_indices), [beam_k, -1])
             next_beam_seq_prob = tf.concat(1, [new_beam_seq_prob, cur_seq_prob])
             cur_eos = tf.slice(logprobs2d, [0, nlc_data.EOS_ID], [batch_size, 1])
-            cand_seq_prob_pad = tf.pad(cand_seq_prob, [[0,0],[0,1]])
-            beam_seq_prob_pad = tf.concat(1, [tf.reshape(beam_seq_prob,
-                                                         [batch_size, -1]),
-                                              cur_eos])
+            cand_seq_prob_pad = tf.pad(cand_seq_prob, [[0,0], [0,1]])
+            beam_seq_prob_pad = tf.concat(1,
+                                          [tf.reshape(beam_seq_prob,
+                                                      [batch_size, -1]),
+                                           cur_eos])
+
             new_cand_seq_prob = tf.concat(0, [cand_seq_prob_pad, beam_seq_prob_pad])
             next_cand_seq_prob = tf.gather(new_cand_seq_prob, next_cand_indices)
 
+            return [next_cand_probs, next_cand_seqs, time + 1, next_time_step, next_beam_steps, next_cand_steps, next_beam_probs, next_beam_seqs, next_cand_seq_prob, next_beam_seq_prob] + next_states
 
-            return [next_cand_probs, next_cand_seqs, time + 1, next_beam_probs, next_beam_seqs, next_cand_seq_prob, next_beam_seq_prob] + next_states
 
         var_shape = []
-        # var_shape.append((total_probs_0, tf.TensorShape([None, None])))
-        # var_shape.append((eos_probs_0, tf.TensorShape([None, None])))
         var_shape.append((cand_probs_0, tf.TensorShape([None,])))
         var_shape.append((cand_seqs_0, tf.TensorShape([None, None])))
-        # var_shape.append((cur_probs_0, tf.TensorShape([None, None])))
-        # var_shape.append((cur_eos_probs_0, tf.TensorShape([None, None])))
-        # var_shape.append((bases_0, tf.TensorShape([None, None])))
-        # var_shape.append((mods_0, tf.TensorShape([None, None])))
         var_shape.append((time_0, time_0.get_shape()))
+        var_shape.append((time_step_0, tf.TensorShape([None, None])))
+        var_shape.append((beam_step_0, tf.TensorShape([None, None])))
+        var_shape.append((cand_step_0, tf.TensorShape([None, None])))
         var_shape.append((beam_probs_0, tf.TensorShape([None,])))
         var_shape.append((beam_seqs_0, tf.TensorShape([None, None])))
         var_shape.append((cand_seqs_prob_0, tf.TensorShape([None,None])))
         var_shape.append((beam_seqs_prob_0, tf.TensorShape([None,None])))
         var_shape.extend([(state_0, tf.TensorShape([None, self.size])) for state_0 in states_0])
         loop_vars, loop_var_shapes = zip(* var_shape)
-        # loop_vars = (self.all_probs, self.all_total_probs, self.all_bases, self.all_mods, self.all_states) + loop_vars
         self.loop_vars = loop_vars
         self.loop_var_shapes = loop_var_shapes
-        # print(loop_var_shapes)
         ret_vars = tf.while_loop(cond=beam_cond, body=beam_step, loop_vars=loop_vars, back_prop=False)
-        #ret_vars = tf.while_loop(cond=beam_cond, body=beam_step, loop_vars=loop_vars, shape_invariants=loop_var_shapes, back_prop=False)
-        #    time, beam_probs, beam_seqs, cand_probs, cand_seqs, _ = ret_vars
         self.vars = ret_vars
         self.beam_output= ret_vars[1]
         self.beam_scores = ret_vars[0]
-        self.beam_trans = ret_vars[5]
+        self.beam_trans = ret_vars[8]
+        self.beam_steps = ret_vars[4]
+        self.cand_steps = ret_vars[5]
 
     def setup_loss(self):
         with vs.variable_scope("Logistic"):
@@ -354,6 +488,7 @@ class NLCModel(object):
         input_feed[self.source_mask] = source_mask
         input_feed[self.target_mask] = target_mask
         input_feed[self.keep_prob] = self.keep_prob_config
+        input_feed[self.len_input] = source_mask.shape[0]
         self.set_default_decoder_state_input(input_feed, target_tokens.shape[1])
 
         output_feed = [self.updates, self.gradient_norm, self.losses, self.param_norm]
@@ -369,6 +504,7 @@ class NLCModel(object):
         input_feed[self.source_mask] = source_mask
         input_feed[self.target_mask] = target_mask
         input_feed[self.keep_prob] = 1.
+        input_feed[self.len_input] = source_mask.shape[0]
         self.set_default_decoder_state_input(input_feed, target_tokens.shape[1])
 
         output_feed = [self.losses]
@@ -408,13 +544,13 @@ class NLCModel(object):
 
         return outputs[0], None, outputs[1:]
 
-    def decode_beam(self, session, encoder_output, beam_size, len_input):
+    def decode_beam(self, session, encoder_output, beam_size, len_input, source_mask):
         input_feed = {}
         input_feed[self.encoder_output] = encoder_output
         input_feed[self.keep_prob] = 1.
         input_feed[self.beam_size] = beam_size
         input_feed[self.len_input] = len_input
-
+        input_feed[self.source_mask] = source_mask 
         output_feed = [self.beam_output, self.beam_scores, self.beam_trans]
 
         outputs = session.run(output_feed, input_feed)

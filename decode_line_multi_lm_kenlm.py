@@ -21,7 +21,7 @@ import time
 import numpy as np
 from os.path import join as pjoin
 from multiprocessing import Pool
-from util_lm import get_string_to_score
+from util_lm_kenlm import get_string_to_score
 from levenshtein import align_pair, align
 
 
@@ -47,7 +47,7 @@ def score_sent(paras):
     return thread_no, lm.score(sent)
 
 def remove_nonascii(text):
-    return re.sub(r'[^\x00-\x7F]', ' ', text)
+    return re.sub(r'[^\x00-\x7F]', '', text)
 
 def rank_sent(pool, sents):
     # res1 = score_sent([0, remove_nonascii(sents[0].replace('_', '-'))])

@@ -4,7 +4,7 @@ import re
 
 
 def remove_nonascii(text):
-    return re.sub(r'[^\x00-\x7F]', ' ', text)
+    return re.sub(r'[^\x00-\x7F]', '', text)
 
 
 def initialize(folder_lm):
@@ -26,7 +26,7 @@ def get_string_to_score(sent):
 def score_sent(paras):
     global lm
     thread_no, sent = paras
-    sent = get_string_to_score(sent)
+    sent = get_string_to_score(sent.lower())
     return thread_no, lm.score(sent)
 
 

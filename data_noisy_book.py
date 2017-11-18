@@ -11,7 +11,7 @@ from util_lm_kenlm import score_sent, initialize
 from levenshtein import align
 
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/book'
+folder_multi = '/scratch/dong.r/Dataset/OCR/book1800/single/'
 folder_lm = '/scratch/dong.r/Dataset/OCR/lm/char'
 
 
@@ -47,7 +47,7 @@ def get_train_data(train_id, split_id, error_ratio, lm_prob, ocr_prob, train, lm
         for line in file(join(folder_train, train + '.y.txt')):
             if line_id >= start:
                 list_y.append(line)
-                if line_id +1  == end:
+                if line_id +1 == end:
                     break
             line_id += 1
     folder_out = join(folder_train, 'noisy_' + str(error_ratio) + '_' + str(lm_prob) + '_' + str(ocr_prob))
@@ -60,12 +60,36 @@ def get_train_data(train_id, split_id, error_ratio, lm_prob, ocr_prob, train, lm
     pool = Pool(100, initializer=initialize(pjoin(folder_lm, lm_name)))
     for i in range(len(list_x)):
         print i
-        cur_x = [ele.strip() for ele in list_x[i].strip('\n').split('\t') if len(ele.strip()) > 0]
+        cur_x = [ele.strip().lower() for ele in list_x[i].strip('\n').split('\t') if len(ele.strip()) > 0]
         best_str, best_id, best_prob, probs = rank_sent(pool, cur_x)
-        if - best_prob / len(cur_x[best_id]) <= lm_prob * 0.01:
+        if 'f' in best_str:
+            index_f = [ele for ele in range(len(best_str)) if best_str[ele] == 'f']
+            good_f = []
+            new_str = [best_str[:ele] + 's' + best_str[ele + 1:] for ele in index_f]
+            _, _, _, scores = rank_sent(pool, new_str)
+            for j in range(len(index_f)):
+                if scores[j] - best_prob > 2:
+                    good_f.append(index_f[j])
+            if len(good_f) > 0:
+                new_best = ''
+                for j in range(len(best_str)):
+                    if j in good_f:
+                        new_best += 's'
+                    else:
+                        new_best += best_str[j]
+                best_str = new_best
+                _, best_prob = score_sent([0, best_str])
+        rand_var = np.random.randn() * 0.2
+        if - best_prob / len(cur_x[best_id]) <= lm_prob * 0.01 + rand_var:
+            if best_id == 0:
+                f_x.write(cur_x[0] + '\n')
+                f_y.write(best_str + '\n')
+                if 'man' in arg_train:
+                    f_z.write(list_y[i])
             # if best_prob / probs[0] <= error_ratio * 0.01 and - probs[0] / len(cur_x[0]) < 0.01 * ocr_prob:
-            if best_prob / probs[0] <= error_ratio * 0.01:
-                if align(best_str, cur_x[0]) * 1. / len(best_str) <= 0.01 * ocr_prob:
+            elif best_prob / probs[0] <= error_ratio * 0.01:
+                if abs(len(cur_x[0]) - len(best_str)) * 1. / len(best_str) <= 0.01 * ocr_prob:
+                # if align(best_str, cur_x[0]) * 1. / len(best_str) <= 0.01 * ocr_prob:
                     f_x.write(cur_x[0] + '\n')
                     f_y.write(best_str + '\n')
                     if 'man' in arg_train:

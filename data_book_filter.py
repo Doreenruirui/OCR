@@ -20,7 +20,7 @@ if not exists(folder_out):
 with open(join(folder_out, arg_train + '.y.txt'), 'w') as f_:
     line_id = 0
     for line in file(join(folder_train, arg_train + '.y.txt')):
-        line = re.sub('\xc5\xbf', 's', line)
+        #line = re.sub('\xc5\xbf', 's', line)
         items = line.strip('\n').split('\t')
         if len(items) > 1:
             flag_filter = 0

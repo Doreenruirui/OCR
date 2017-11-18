@@ -72,11 +72,11 @@ def align_re(str1, str2):
 
 
 def count_operation(paras):
-    str1, str2 = paras
+    thread_no, str1, str2 = paras
     if len(str1) == 0:
-        return len(str2), 0, 0
+        return thread_no, len(str2), 0, 0, 'i' * len(str2)
     elif len(str2) == 0:
-        return 0, len(str1), 0
+        return thread_no, 0, len(str1), 0, 'd' * len(str1)
     _, d, op = align_re(str1, str2)
     len1, len2 = d.shape
     len1 -= 1
@@ -101,14 +101,20 @@ def count_operation(paras):
     num_ins = 0
     num_del = 0
     num_rep = 0
+    op_str = ''
     for (i, j) in path:
         if op[i, j] == 1:
             num_ins += 1
+            op_str += 'i'
         elif op[i, j] == 2:
             num_del += 1
+            op_str += 'd'
         elif op[i, j] == 3:
             num_rep += 1
-    return num_ins, num_del, num_rep
+            op_str += 'r'
+        else:
+            op_str += 'c'
+    return thread_no, num_ins, num_del, num_rep, op_str
 
 
 def recover(str1, str2):
@@ -265,18 +271,24 @@ def align_pair(P, truth, cands, flag_char=1):
 def count_pair(P, truth, cands):
     global output, output_str
     ndata = len(truth)
-    paras = zip(truth, cands)
+    list_index = np.arange(ndata).tolist()
+    paras = zip(list_index, truth, cands)
     # results = []
     # for ele in paras:
-    #     results.append(count_operation(ele))
     results = P.map(count_operation, paras)
     num_ins, num_del, num_rep = 0, 0, 0
+    list_op = [[0, 0, 0] for _ in range(ndata)]
+    list_op_str = ['' for _ in range(ndata)]
     for i in range(ndata):
-        cur_ins, cur_del, cur_rep = results[i]
+        thread_no, cur_ins, cur_del, cur_rep, cur_str = results[i]
         num_ins += cur_ins
         num_del += cur_del
         num_rep += cur_rep
-    return num_ins, num_del, num_rep
+        list_op[thread_no][0] = cur_ins
+        list_op[thread_no][1] = cur_del
+        list_op[thread_no][2] = cur_rep
+        list_op_str[thread_no] = cur_str
+    return num_ins, num_del, num_rep, list_op, list_op_str
 
 
 def align_beam(P, truth, cands, flag_char=1):

@@ -178,7 +178,8 @@ def compute_error_rate(train_id, split_id):
 
 def get_train_data(train_id, split_id, error_ratio, train):
     folder_train = join(folder_multi, str(train_id), str(split_id))
-    folder_error = join(folder_train, str(error_ratio))
+    #folder_error = join(folder_train, str(error_ratio))
+    folder_error = join(folder_train, 'train')    
     if not exists(folder_error):
         os.makedirs(folder_error)
     list_x = []
@@ -215,7 +216,7 @@ def get_train_data(train_id, split_id, error_ratio, train):
     out_y.close()
     out_info.close()
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/book/single'
+folder_multi = '/scratch/dong.r/Dataset/OCR/book1800/single'
 # check_manual()
 #get_all_date()
 #split_train_test(0.8, 0)
@@ -223,10 +224,10 @@ folder_multi = '/scratch/dong.r/Dataset/OCR/book/single'
 cur_test_id =  int(sys.argv[1])
 cur_train_id = int(sys.argv[2])
 cur_error = int(sys.argv[3])
-split_train_test(0.8, cur_test_id)
-split_train_dev(0.8, cur_test_id, cur_train_id)
+#split_train_test(0.8, cur_test_id)
+#split_train_dev(0.8, cur_test_id, cur_train_id)
 print ('Splitting Data')
-split_date(cur_test_id, cur_train_id)
+#split_date(cur_test_id, cur_train_id)
 #print ('Computing Error Rate')
 #compute_error_rate(cur_test_id, cur_train_id)
 print ('Get Training and Dev data')

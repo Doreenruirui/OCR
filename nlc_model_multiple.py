@@ -269,8 +269,15 @@ class NLCModel(object):
             # next_eos_prob = tf.concat(0, [eos_probs, eos_prob_vec])
             ###############
 
+            # new_cand_probs = tf.concat(0, [cand_probs, tf.reshape(EOS_probs, [-1])])
+            new_cand_len = tf.reduce_sum(tf.cast(tf.greater(tf.abs(new_cand_seqs), 0), tf.int32), reduction_indices=1)
             new_cand_probs = tf.concat(0, [cand_probs, tf.reshape(EOS_probs, [-1])])
-
+            new_cand_probs = tf.select(tf.greater(self.len_input - 10, new_cand_len),
+                                       tf.ones_like(new_cand_probs) * -3e38,
+                                       new_cand_probs)
+            new_cand_probs =  tf.select(tf.greater(new_cand_len, self.len_input + 10),
+                                        tf.ones_like(new_cand_probs) * -3e38,
+                                        new_cand_probs)
             cand_k = tf.minimum(tf.size(new_cand_probs), self.beam_size)
             next_cand_probs, next_cand_indices = tf.nn.top_k(new_cand_probs, k=cand_k)
             next_cand_seqs = tf.gather(new_cand_seqs, next_cand_indices)

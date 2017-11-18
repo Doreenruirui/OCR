@@ -121,7 +121,7 @@ def create_vocabulary(data_dir, max_vocabulary_size,
                 # Remove non-ASCII characters
                 #if flag_ascii:
                 #    line = remove_nonascii(line)
-                line = line.strip()
+                line = remove_nonascii(line).strip()
                 tokens = tokenizer(line) if tokenizer else basic_tokenizer(line)
                 for w in tokens:
                     word = re.sub(_DIGIT_RE, b"0", w) if normalize_digits else w
@@ -135,12 +135,7 @@ def create_vocabulary(data_dir, max_vocabulary_size,
         vocab_list = vocab_list[:max_vocabulary_size]
     with gfile.GFile(vocabulary_path, mode="wb") as vocab_file:
         for w in vocab_list:
-            if w in _START_VOCAB:
-                vocab_file.write(w + b"\n")
-            else:
-                print(vocab[w])
-                if vocab[w] > 1000:
-                    vocab_file.write(w + b"\n")
+            vocab_file.write(w + b"\n")
 
 
 def initialize_vocabulary(vocabulary_path, bpe=False):
