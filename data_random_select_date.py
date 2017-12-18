@@ -62,8 +62,10 @@ def get_train_data(cur_folder, train_ratio, train):
         f_info = open(join(folder_out, train + '.info.txt'), 'w')
     if flag_z:
         f_z = open(join(folder_out, train + '.z.txt'), 'w')
+    #print len(list_z)
     for i in range(len(train_index)):
         cur_index = train_index[i]
+        print cur_index
         f_x.write(list_x[cur_index])
         f_y.write(list_y[cur_index])
         if flag_z:
@@ -79,7 +81,7 @@ def get_train_data(cur_folder, train_ratio, train):
     np.savetxt(join(folder_out, train + '.index.txt'), train_index, fmt='%d')
 
 arg_folder = sys.argv[1]
-arg_train_ratio = int(sys.argv[2])
+arg_train_ratio = float(sys.argv[2])
 arg_train = sys.argv[3]
-get_train_info(arg_folder, arg_train_ratio, arg_train)
+#get_train_info(arg_folder, arg_train_ratio, arg_train)
 get_train_data(arg_folder, arg_train_ratio, arg_train)

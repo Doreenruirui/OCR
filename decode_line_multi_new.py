@@ -24,7 +24,7 @@ from six.moves import xrange
 import tensorflow as tf
 from multiprocessing import Pool
 from os.path import join as pjoin
-import nlc_model_multiple_hierarchical as nlc_model
+import nlc_model_multiple as nlc_model
 import nlc_data
 from levenshtein import align, align_one2many
 from util import initialize_vocabulary, get_tokenizer
@@ -64,7 +64,7 @@ def padded(tokens, depth):
 def tokenize(sents, vocab, depth=FLAGS.num_layers):
     token_ids = []
     for sent in sents:
-        token_ids.append(nlc_data.sentence_to_token_ids(remove_nonascii(sent), vocab, get_tokenizer(FLAGS.tokenizer)))
+        token_ids.append(nlc_data.sentence_to_token_ids(sent, vocab, get_tokenizer(FLAGS.tokenizer)))
     token_ids = padded(token_ids, depth)
     source = np.array(token_ids).T
     source_mask = (source != 0).astype(np.int32)
@@ -114,7 +114,7 @@ def fix_sent(model, sess, sent):
     s1, s2, s3 = encoder_output.shape
     encoder_output = np.transpose(encoder_output, (1, 0, 2))
     encoder_output = np.reshape(encoder_output, [s2, s1, 1, s3])
-    len_input = mask.shape[0]
+    len_input = sum(mask[:, 0])
     # Decode
     beam_toks, probs, prob_trans = decode_beam(model, sess, encoder_output, FLAGS.beam_size, len_input)
     # De-tokenize
@@ -150,11 +150,13 @@ def decode():
     if flag_evl:
         with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.y.txt'), 'r') as f_:
             truths = [ele.lower().strip() for ele in f_.readlines()]
-        f_o = open(pjoin(folder_out, FLAGS.dev + '.hier.' + '.ec.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+        f_o = open(pjoin(folder_out, FLAGS.dev + '.avg' + '.ec.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+        f_p = open(pjoin(folder_out, FLAGS.dev + '.avg.p.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
         pool = Pool(100)
     else:
         #f_o = open(pjoin(folder_out, FLAGS.dev + '.om1.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end))    , 'w')
-        f_o = open(pjoin(folder_out, FLAGS.dev + '.hier.' + '.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+        f_o = open(pjoin(folder_out, FLAGS.dev + '.avg' + '.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+        f_p = open(pjoin(folder_out, FLAGS.dev + '.avg.p.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     for line_id in range(FLAGS.start, FLAGS.end):
         line = lines[line_id]
         if flag_evl:
@@ -172,16 +174,19 @@ def decode():
                 f_o.write('\t'.join(map(str, [best_dis, top_dis, len(cur_truth)])) + '\n')
             else:
                 f_o.write('\n'.join(output_sents) + '\n')
+                f_p.write('\n'.join(map(str, output_probs)) + '\n')
         else:
             if flag_evl:
                 f_o.write('\t'.join(map(str, [len(cur_truth), len(cur_truth), len(cur_truth)])) + '\n')
             else:
-                f_o.write('\n' * 100)
+                f_o.write('\n' * 100 + '\n')
+                f_p.write('0' * 100 + '\n')
         if line_id % 100 == 0:
             toc = time.time()
             print(toc - tic)
             tic = time.time()
     f_o.close()
+    f_p.close()
 
 
 def main(_):

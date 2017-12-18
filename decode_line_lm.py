@@ -36,6 +36,33 @@ end = -1
 w1 = 0.0
 w2 = 0.0
 
+def get_line2group():
+    global folder_data, data_dir, out_dir, lm_dir, dev, start, end, w1, w2
+    data_dir = pjoin(folder_data, data_dir)
+    file_info = pjoin(data_dir, dev + '.info.txt')
+    group_no = 0
+    last_end = 0
+    line_id = 0
+    cur_key = ''
+    line2group = []
+    for line in file(file_info):
+        date, seq, start, end = line.strip('\n').split('\t')
+        start = int(start)
+        end = int(end)
+        if line_id == 0:
+            cur_key = date + '-' + seq
+        new_key = date + '-' + seq
+        if new_key != cur_key:
+            group_no += 1
+            cur_key = new_key
+        elif start != last_end + 1:
+            group_no += 1
+        last_end = end
+        line2group.append(group_no)
+        line_id += 1
+    with open(pjoin(data_dir, dev + '.line2group'), 'w') as f_:
+        for line in line2group:
+            f_.write(str(line) + '\n') 
 
 def evaluate():
     global folder_data, data_dir, out_dir, lm_dir, dev, start, end, w1, w2
@@ -55,7 +82,10 @@ def evaluate():
         truths.append(line.strip('\n'))
     outputs = []
     for line in file(pjoin(folder_test, dev + '.o.txt.' + str(start) + '_' + str(end))):
-        outputs.append(line.strip())
+        if 'low' in lm_dir:
+            outputs.append(line.strip().lower())
+        else:
+            outputs.append(line.strip())
     output_probs = []
     for line in file(pjoin(folder_test, dev + '.p.txt.' + str(start) + '_' + str(end))):
         output_probs.append(float(line.strip()))
@@ -89,6 +119,7 @@ def evaluate():
             pro_group = []
             pro_truth = []
             pro_prob = []
+            pro_lines = []
             pro_group_id = cur_group_id
             f_.write(str(dis1) + '\t' + str(len_truth) + '\t' + str(dis2) +  '\t' + str(dis3) + '\t' + str(len(strip_truth)) + '\n')
         pro_group.append(cur_group)
@@ -109,6 +140,7 @@ def main():
     end = int(sys.argv[6])
     w1 = float(sys.argv[7])
     w2 = float(sys.argv[8])
+    #get_line2group()
     evaluate()
 
 

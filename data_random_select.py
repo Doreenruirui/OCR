@@ -58,6 +58,6 @@ def get_train_data(cur_folder, train_ratio, train):
     np.savetxt(join(folder_out, train + '.index.txt'), train_index, fmt='%d')
 
 arg_folder = sys.argv[1]
-arg_train_ratio = int(sys.argv[2])
+arg_train_ratio = float(sys.argv[2])
 arg_train = sys.argv[3]
 get_train_data(arg_folder, arg_train_ratio, arg_train)

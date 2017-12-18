@@ -11,7 +11,7 @@ from util_lm_kenlm import score_sent, initialize
 from levenshtein import align
 
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/'
+folder_multi = '/scratch/dong.r/Dataset/OCR/richmond/single/'
 folder_lm = '/scratch/dong.r/Dataset/OCR/lm/char'
 
 
@@ -32,8 +32,8 @@ def rank_sent(pool, sents):
     return max_str, max_id, max_prob, probs
 
 
-def get_train_data(cur_folder, lm_prob, train, lm_name, start, end):
-    folder_train = join(folder_multi, cur_folder)
+def get_train_data(train_id, split_id, error_ratio, lm_prob, ocr_prob, train, lm_name, start, end):
+    folder_train = join(folder_multi, str(train_id), str(split_id))
     list_info = []
     line_id = 0
     for line in file(join(folder_train, train + '.info.txt')):
@@ -59,7 +59,7 @@ def get_train_data(cur_folder, lm_prob, train, lm_name, start, end):
                 if line_id +1 == end:
                     break
             line_id += 1
-    folder_out = join(folder_train, 'noisy_' + str(lm_prob))
+    folder_out = join(folder_train, 'noisy_' + str(error_ratio) + '_' + str(lm_prob) + '_' + str(ocr_prob))
     if not os.path.exists(folder_out):
         os.makedirs(folder_out)
     f_x = open(join(folder_out, train + '.x.txt.' + str(start) + '_' + str(end)), 'w')
@@ -73,11 +73,20 @@ def get_train_data(cur_folder, lm_prob, train, lm_name, start, end):
         cur_x = [ele.strip() for ele in list_x[i].strip('\n').split('\t') if len(ele.strip()) > 0]
         best_str, best_id, best_prob, probs = rank_sent(pool, cur_x)
         if - best_prob / len(cur_x[best_id]) <= lm_prob * 0.01:
+            # if best_id == 0:
             f_x.write(cur_x[0] + '\n')
             f_y.write(cur_x[best_id] + '\n')
             f_info.write(list_info[i])
             if 'man' in arg_train:
                 f_z.write(list_y[i])
+            # elif probs[0] / best_prob <= error_ratio * 0.01:
+                # if abs(len(cur_x[0]) - len(best_str)) * 1. / len(best_str) <= 0.01 * ocr_prob:
+            # if align(best_str, cur_x[0]) * 1. / len(best_str) <= 0.01 * ocr_prob:
+            #     f_x.write(cur_x[0] + '\n')
+            #     f_y.write(best_str + '\n')
+            #     f_info.write(list_info[i])
+            #     if 'man' in arg_train:
+            #         f_z.write(list_y[i])
     f_x.close()
     f_y.close()
     f_info.close()
@@ -85,12 +94,16 @@ def get_train_data(cur_folder, lm_prob, train, lm_name, start, end):
         f_z.close()
 
 
-arg_folder = sys.argv[1]
-arg_train = sys.argv[2]
-arg_lm_prob = int(sys.argv[3])
-arg_lm = sys.argv[4]
-arg_start = int(sys.argv[5])
-arg_end = int(sys.argv[6])
-get_train_data(arg_folder, arg_lm_prob,
+arg_train_id = int(sys.argv[1])
+arg_split_id = int(sys.argv[2])
+arg_error_ratio = int(sys.argv[3])
+arg_lm_prob = int(sys.argv[4])
+arg_ocr_prob = int(sys.argv[5])
+arg_train = sys.argv[6]
+arg_lm = sys.argv[7]
+arg_start = int(sys.argv[8])
+arg_end = int(sys.argv[9])
+get_train_data(arg_train_id, arg_split_id,
+               arg_error_ratio, arg_lm_prob, arg_ocr_prob,
                arg_train, arg_lm,
                arg_start, arg_end)

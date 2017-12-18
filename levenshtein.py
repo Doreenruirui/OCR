@@ -173,14 +173,20 @@ def recover(str1, str2):
 
 
 def align_one2many_thread(para):
-    thread_num, str1, list_str, flag_char = para
+    thread_num, str1, list_str, flag_char, flag_low = para
+    str1 = ' '.join([ele for ele in str1.split(' ') if len(ele) > 0])
+    if flag_low:
+        str1 = str1.lower()
     min_dis = float('inf')
     min_str = ''
     for i in range(len(list_str)):
+        cur_str = ' '.join([ele for ele in list_str[i].split(' ') if len(ele) > 0])
+        if flag_low:
+            cur_str = cur_str.lower()
         if not flag_char:
-            dis = align(str1.split(), list_str[i].split())
+            dis = align(str1.split(), cur_str.split())
         else:
-            dis = align(str1, list_str[i])
+            dis = align(str1, cur_str)
         if dis < min_dis:
             min_dis = dis
             min_str = list_str[i]
@@ -188,7 +194,10 @@ def align_one2many_thread(para):
 
 
 def align_one2one(para):
-    thread_num, str1, str2, flag_char = para
+    thread_num, str1, str2, flag_char, flag_low = para
+    if flag_low:
+        str1 = str1.lower()
+        str2 = str2.lower()
     if flag_char:
         return thread_num, align(str1, str2)
     else:
@@ -254,13 +263,14 @@ def align_one2many(P, truth, cands, flag_char=1):
     return min_dis, min_str
 
 
-def align_pair(P, truth, cands, flag_char=1):
+def align_pair(P, truth, cands, flag_char=1, flag_low=1):
     global output, output_str
     ndata = len(truth)
     output = [0 for _ in range(ndata)]
     list_index = np.arange(ndata).tolist()
     list_flag = [flag_char for _ in range(ndata)]
-    paras = zip(list_index, truth, cands, list_flag)
+    list_low = [flag_low for _ in range(ndata)]
+    paras = zip(list_index, truth, cands, list_flag, list_low)
     results = P.map(align_one2one, paras)
     for i in range(ndata):
         thread_num, dis = results[i]
@@ -291,14 +301,15 @@ def count_pair(P, truth, cands):
     return num_ins, num_del, num_rep, list_op, list_op_str
 
 
-def align_beam(P, truth, cands, flag_char=1):
+def align_beam(P, truth, cands, flag_char=1, flag_low=1):
     global output, output_str
     ndata = len(truth)
     list_dis = [0 for _ in range(ndata)]
     list_str = ['' for _ in range(ndata)]
     list_index = np.arange(ndata).tolist()
-    list_flag = [flag_char for _ in range(ndata)]
-    paras = zip(list_index, truth, cands, list_flag)
+    list_flag_char = [flag_char for _ in range(ndata)]
+    list_flag_low = [flag_low for _ in range(ndata)]
+    paras = zip(list_index, truth, cands, list_flag_char, list_flag_low)
     results = P.map(align_one2many_thread, paras)
     for i in range(ndata):
         cur_thread, cur_dis, cur_str = results[i]

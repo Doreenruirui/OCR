@@ -22,7 +22,7 @@ def error_rate(dis_xy, len_y):
     return micro_error, macro_error
 
 
-def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0, end=-1, flag_char=1):
+def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0, end=-1, flag_char=1, flag_low=1):
     global folder_data
     folder_data = pjoin(folder_data, folder_name)
     if end == -1:
@@ -35,9 +35,10 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
     list_top = []
     for line in file(file_name):
         line_id += 1
-        cur_str = line.strip().lower()
-        cur_str = cur_str.translate(None, string.punctuation)
-        cur_str = ' '.join([ele for ele in cur_str.split(' ') if len(ele) > 0])
+        cur_str = line.strip()
+        # cur_str = line.strip().lower()
+        #cur_str = cur_str.translate(None, string.punctuation)
+        # cur_str = ' '.join([ele for ele in cur_str.split(' ') if len(ele) > 0])
         if line_id % beam_size == 1:
             if len(list_beam) == beam_size:
                 list_dec.append(list_beam)
@@ -49,10 +50,11 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
     if end == -1:
         end = len(list_dec)
     with open(pjoin(folder_data, prefix + '.y.txt'), 'r') as f_:
-        list_y_old = [ele.strip().lower() for ele in f_.readlines()][start:end]
+        # list_y_old = [ele.strip().lower() for ele in f_.readlines()][start:end]
+        list_y_old = [ele.strip() for ele in f_.readlines()][start:end]
         list_y = []
         for ele in list_y_old:
-            ele = ele.translate(None, string.punctuation)
+            #ele = ele.translate(None, string.punctuation)
             ele = ' '.join([item for item in ele.split(' ') if len(item) > 0])
             list_y.append(ele)
     if flag_char:
@@ -62,9 +64,9 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
     print len(len_y)
     nthread = 100
     pool = Pool(nthread)
-    dis_by, best_str = align_beam(pool, list_y, list_dec, flag_char)
+    dis_by, best_str = align_beam(pool, list_y, list_dec, flag_char, flag_low)
     # num_ins, num_del, num_rep = count_pair(pool, list_top, list_y)
-    dis_ty = align_pair(pool, list_y,  list_top, flag_char)
+    dis_ty = align_pair(pool, list_y,  list_top, flag_char, flag_low)
     dis = np.asarray(zip(dis_by, dis_ty, len_y))
     if end == -1:
         if flag_char:
@@ -76,15 +78,21 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
             outfile = pjoin(folder_data, out_folder, prefix + '.ec.txt.' + str(start) + '_' + str(end))
         else:
             outfile = pjoin(folder_data, out_folder, prefix + '.ew.txt.' + str(start) + '_' + str(end))
-    with open(pjoin(folder_data, out_folder, prefix + '.top.txt.' + str(start) + '_' + str(end)), 'w') as f_:
+    np.savetxt(outfile, dis, fmt='%d')
+    if flag_char:
+        outfile = pjoin(folder_data, out_folder, prefix + '.topc.txt.' + str(start) + '_' + str(end))
+    else:
+        outfile = pjoin(folder_data, out_folder, prefix + '.topw.txt.' + str(start) + '_' + str(end))
+    with open(outfile, 'w') as f_:
         for cur_str in list_top:
             f_.write(cur_str + '\n')
-    with open(pjoin(folder_data, out_folder, prefix + '.bs.txt.' + str(start) + '_' + str(end)), 'w') as f_:
+    if flag_char:
+        outfile = pjoin(folder_data, out_folder, prefix + '.bsc.txt.' + str(start) + '_' + str(end))
+    else:
+        outfile = pjoin(folder_data, out_folder, prefix + '.bsw.txt.' + str(start) + '_' + str(end))
+    with open(outfile, 'w') as f_:
         for cur_str in best_str:
             f_.write(cur_str + '\n')
-
-    np.savetxt(outfile, dis, fmt='%d')
-
 
 
 cur_folder = sys.argv[1]
@@ -93,5 +101,5 @@ cur_prefix = sys.argv[3]
 beam = int(sys.argv[4])
 start_line = int(sys.argv[5])
 end_line = int(sys.argv[6])
-evaluate_multi(cur_folder, cur_out, cur_prefix, beam_size=beam, start=start_line, end=end_line, flag_char=1)
-
+flag_char = int(sys.argv[7])
+evaluate_multi(cur_folder, cur_out, cur_prefix, beam_size=beam, start=start_line, end=end_line, flag_char=flag_char)

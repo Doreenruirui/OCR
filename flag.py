@@ -30,5 +30,7 @@ tf.app.flags.DEFINE_integer("end", 0, "Decode to.")
 tf.app.flags.DEFINE_float("variance", 3, "The context window size for decoding")
 tf.app.flags.DEFINE_float("scalar", 3, "The scalar for sharpness of prior distribution")
 tf.app.flags.DEFINE_float("weight", 0.8, "The weight for the original distribution.")
+tf.app.flags.DEFINE_string("voc_dir", None, "The vocabulary folder")
+tf.app.flags.DEFINE_integer("num_wit", 50, "number of witnesses.")
 
 FLAGS = tf.app.flags.FLAGS

@@ -64,7 +64,7 @@ def padded(tokens, depth):
 def tokenize(sents, vocab, depth=FLAGS.num_layers):
     token_ids = []
     for sent in sents:
-        token_ids.append(nlc_data.sentence_to_token_ids(remove_nonascii(sent), vocab, get_tokenizer(FLAGS.tokenizer)))
+        token_ids.append(nlc_data.sentence_to_token_ids(sent, vocab, get_tokenizer(FLAGS.tokenizer)))
     token_ids = padded(token_ids, depth)
     source = np.array(token_ids).T
     source_mask = (source != 0).astype(np.int32)
@@ -151,15 +151,17 @@ def decode():
         with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.y.txt'), 'r') as f_:
             truths = [ele.lower().strip() for ele in f_.readlines()]
         f_o = open(pjoin(folder_out, FLAGS.dev + '.avg' + '.ec.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+        f_p = open(pjoin(folder_out, FLAGS.dev + '.avg.p.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
         pool = Pool(100)
     else:
         #f_o = open(pjoin(folder_out, FLAGS.dev + '.om1.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end))    , 'w')
         f_o = open(pjoin(folder_out, FLAGS.dev + '.avg' + '.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+        f_p = open(pjoin(folder_out, FLAGS.dev + '.avg.p.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     for line_id in range(FLAGS.start, FLAGS.end):
         line = lines[line_id]
         if flag_evl:
             cur_truth = truths[line_id]
-        sents = [ele for ele in line.strip('\n').split('\t')][:20]
+        sents = [ele for ele in line.strip('\n').split('\t')][:50]
         sents = [ele for ele in sents if len(ele.strip()) > 0]
         #sents = [ele.replace('-', '_') for ele in sents if len(ele.strip()) > 0]
         if len(sents) > 0:
@@ -172,16 +174,19 @@ def decode():
                 f_o.write('\t'.join(map(str, [best_dis, top_dis, len(cur_truth)])) + '\n')
             else:
                 f_o.write('\n'.join(output_sents) + '\n')
+                f_p.write('\n'.join(map(str, output_probs)) + '\n')
         else:
             if flag_evl:
                 f_o.write('\t'.join(map(str, [len(cur_truth), len(cur_truth), len(cur_truth)])) + '\n')
             else:
-                f_o.write('\n' * 100)
+                f_o.write('\n' * 100 + '\n')
+                f_p.write('0' * 100 + '\n')
         if line_id % 100 == 0:
             toc = time.time()
             print(toc - tic)
             tic = time.time()
     f_o.close()
+    f_p.close()
 
 
 def main(_):

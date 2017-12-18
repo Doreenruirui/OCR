@@ -23,7 +23,7 @@ def convert_data(cur_folder, out_folder, cur_prefix):
     cur_folder = join(folder_data, cur_folder)
     out_folder = join(folder_data, out_folder)
     list_x = []
-    list_y = []
+    #list_y = []
     convert('x', list_x)
     #convert('y', list_y)
     num_line = len(list_x)

@@ -47,7 +47,7 @@ def one_book(bookname):
 
 def get_books(input_folder, output_folder, max_lines):
     input_files = [ele for ele in os.listdir(input_folder)
-                   if ele.endswith('.txt') and not ele.startswith('.')]
+                   if ele.endswith('.txt') and ele.startswith('nyt_eng')]
     num_file = len(input_files)
     rand_index = np.arange(num_file)
     np.random.shuffle(rand_index)

@@ -133,9 +133,10 @@ def decode():
         os.makedirs(folder_out)
 
     print("Preparing NLC data in %s" % FLAGS.data_dir)
-    vocab_path = pjoin(FLAGS.data_dir, "vocab.dat")
+    vocab_path = pjoin(FLAGS.voc_dir, "vocab.dat")
     vocab, reverse_vocab = initialize_vocabulary(vocab_path)
     vocab_size = len(vocab)
+    
     print("Vocabulary size: %d" % vocab_size)
     if FLAGS.gpu_frac == 1:
         sess = tf.Session()
