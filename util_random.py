@@ -41,7 +41,6 @@ _DIGIT_RE = re.compile(br"\d")
 
 
 
-
 def tokenize(string):
   return [int(s) for s in string.split()]
 
@@ -77,13 +76,14 @@ def refill(batches, fdx, fdy, batch_size, sort_and_shuffle=True):
   while linex and liney:
     x_tokens, y_tokens = tokenize(linex), tokenize(liney)
 
-    if len(x_tokens) < FLAGS.max_seq_len and len() < FLAGS.max_seq_len:
+    if len(x_tokens) < FLAGS.max_seq_len and len(y_tokens) < FLAGS.max_seq_len:
       line_pairs.append((x_tokens, y_tokens))
-    if len(line_pairs) == batch_size * 16:
-      break
+    # if len(line_pairs) == batch_size * 16:
+    #   break
     linex, liney = fdx.readline(), fdy.readline()
 
   if sort_and_shuffle:
+    random.shuffle(line_pairs)
     line_pairs = sorted(line_pairs, key=lambda e: len(e[0]))
 
   for batch_start in xrange(0, len(line_pairs), batch_size):

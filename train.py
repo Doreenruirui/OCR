@@ -30,17 +30,16 @@ import numpy as np
 from six.moves import xrange
 import tensorflow as tf
 
-import nlc_model as nlc_model
+import nlc_model_hidden as nlc_model
 from flag import FLAGS
-from util import pair_iter, initialize_vocabulary
-import util
+from util_random import pair_iter, initialize_vocabulary
 
 import logging
 logging.basicConfig(level=logging.INFO)
 
 def create_model(session, vocab_size, forward_only):
     model = nlc_model.NLCModel(
-        vocab_size, FLAGS.size, FLAGS.num_layers, FLAGS.max_gradient_norm, FLAGS.batch_size,
+        vocab_size, FLAGS.embed_size, FLAGS.size, FLAGS.num_layers, FLAGS.max_gradient_norm, FLAGS.batch_size,
         FLAGS.learning_rate, FLAGS.learning_rate_decay_factor, FLAGS.dropout,
         forward_only=forward_only, optimizer=FLAGS.optimizer)
     ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
