@@ -2,7 +2,7 @@ from os.path import join as pjoin
 import sys
 import numpy as np
 
-folder_data = '/scratch/dong.r/Dataset/OCR'
+folder_data = '/gss_gpfs_scratch/dong.r/Dataset/OCR'
 arg_index = sys.argv[1]
 arg_data = sys.argv[2]
 

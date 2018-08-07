@@ -20,6 +20,6 @@ def get_rand_train_dev(train_id):
     np.savetxt(join(folder_train, 'date_random'), rand_index, fmt='%d')
 
 
-folder_multi = join('/scratch/dong.r/Dataset/OCR/', sys.argv[1])
+folder_multi = join('/gss_gpfs_scratch/dong.r/Dataset/OCR/', sys.argv[1])
 arg_train_id = int(sys.argv[2])
 get_rand_train_dev(arg_train_id)

@@ -11,8 +11,8 @@ from util_lm_kenlm import score_sent, initialize
 from levenshtein import align
 
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/richmond/single/'
-folder_lm = '/scratch/dong.r/Dataset/OCR/lm/char'
+folder_multi = '/gss_gpfs_scratch/dong.r/Dataset/OCR/richmond/single/'
+folder_lm = '/gss_gpfs_scratch/dong.r/Dataset/OCR/lm/char'
 
 
 def rank_sent(pool, sents):

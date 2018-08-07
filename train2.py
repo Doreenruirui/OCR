@@ -32,7 +32,8 @@ import tensorflow as tf
 
 import nlc_model as nlc_model
 from flag import FLAGS
-from util_random import pair_iter, initialize_vocabulary
+from util2 import pair_iter, initialize_vocabulary
+import util
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -85,8 +86,7 @@ def train():
 
     with open(os.path.join(FLAGS.train_dir, "flags.json"), 'w') as fout:
         json.dump(FLAGS.__flags, fout)
-   # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.gpu_frac)
-    #with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)) as sess:
+
     with tf.Session() as sess:
         logging.info("Creating %d layers of %d units." % (FLAGS.num_layers, FLAGS.size))
         model, epoch = create_model(sess, vocab_size, False)

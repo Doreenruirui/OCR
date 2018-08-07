@@ -7,7 +7,7 @@ import re
 import sys
 
 # folder_data = '/Users/doreen/Documents/Experiment/dataset/OCR/'
-folder_data = '/scratch/dong.r/Dataset/OCR'
+folder_data = '/gss_gpfs_scratch/dong.r/Dataset/OCR'
 
 
 def remove(text):
@@ -25,8 +25,10 @@ def evaluate_man(folder_name, prefix='dev', flag_char=1):
     cur_folder_data = pjoin(folder_data, folder_name)
     with open(pjoin(cur_folder_data, prefix + '.x.txt'), 'r') as f_:
         list_x = [ele.lower().strip() for ele in f_.readlines()]
+        #list_x = [ele.strip() for ele in f_.readlines()]
     with open(pjoin(cur_folder_data, prefix + '.y.txt'), 'r') as f_:
         list_y = [ele.strip().lower() for ele in f_.readlines()]
+        #list_y = [ele.strip() for ele in f_.readlines()]
     if flag_char:
         len_y = [len(y) for y in list_y]
     else:
@@ -78,10 +80,13 @@ def evaluate_man_wit(folder_name, prefix='dev', flag_char=1):
 
 
 cur_folder = sys.argv[1]
-#cur_prefix = sys.argv[2]
+cur_prefix = sys.argv[2]
+flag_man = int(sys.argv[3])
 #evaluate_man(cur_folder, 'man_wit.test.nyt_low', 1)
 #evaluate_man(cur_folder, 'man_wit.test.nyt_low', 0)
-#evaluate_man(cur_folder, 'man_wit.test.pcrf', flag_char=1)
-#evaluate_man(cur_folder, 'man_wit.test.pcrf', flag_char=0)
-evaluate_man_wit(cur_folder, 'man_wit.test', flag_char=1)
-evaluate_man_wit(cur_folder, 'man_wit.test', flag_char=0)
+if flag_man:
+    evaluate_man(cur_folder, cur_prefix, flag_char=1)
+    evaluate_man(cur_folder, cur_prefix, flag_char=0)
+else:
+    evaluate_man_wit(cur_folder, cur_prefix, flag_char=1)
+    evaluate_man_wit(cur_folder, cur_prefix, flag_char=0)

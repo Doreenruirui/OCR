@@ -9,7 +9,7 @@ import string
 
 
 # folder_data = '/Users/doreen/Documents/Experiment/dataset/OCR/'
-folder_data = '/scratch/dong.r/Dataset/OCR'
+folder_data = '/gss_gpfs_scratch/dong.r/Dataset/OCR'
 
 
 def compute_recall_thread(paras):

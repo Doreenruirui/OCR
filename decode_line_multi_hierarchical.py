@@ -150,11 +150,11 @@ def decode():
     if flag_evl:
         with open(pjoin(FLAGS.data_dir, FLAGS.dev + '.y.txt'), 'r') as f_:
             truths = [ele.lower().strip() for ele in f_.readlines()]
-        f_o = open(pjoin(folder_out, FLAGS.dev + '.hier.' + '.ec.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+        f_o = open(pjoin(folder_out, FLAGS.dev + '.hier' + '.ec.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
         pool = Pool(100)
     else:
         #f_o = open(pjoin(folder_out, FLAGS.dev + '.om1.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end))    , 'w')
-        f_o = open(pjoin(folder_out, FLAGS.dev + '.hier.' + '.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
+        f_o = open(pjoin(folder_out, FLAGS.dev + '.hier' + '.o.txt.' + str(FLAGS.start) + '_' + str(FLAGS.end)), 'w')
     for line_id in range(FLAGS.start, FLAGS.end):
         line = lines[line_id]
         if flag_evl:

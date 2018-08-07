@@ -6,8 +6,8 @@ from collections import OrderedDict
 from multiprocessing import Pool
 
 
-folder_data = '/scratch/dong.r/Dataset/unprocessed/witnesses.json'
-folder_out = '/scratch/dong.r/Dataset/OCR/multi'
+folder_data = '/gss_gpfs_scratch/dong.r/Dataset/unprocessed/witnesses.json'
+folder_out = '/gss_gpfs_scratch/dong.r/Dataset/OCR/multi'
 
 
 def process_line(line):

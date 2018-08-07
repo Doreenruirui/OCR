@@ -30,7 +30,7 @@ def get_rand_train_test():
     np.savetxt(join(folder_multi, 'date_random'), rand_index, fmt='%d')
 
 
-folder_multi = join('/scratch/dong.r/Dataset/OCR/', sys.argv[1])
+folder_multi = join('/gss_gpfs_scratch/dong.r/Dataset/OCR/', sys.argv[1])
 get_all_date()
 get_rand_train_test()
 

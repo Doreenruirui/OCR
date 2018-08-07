@@ -5,10 +5,10 @@ import numpy as np
 
 
 line_length = 40
-folder_input = '/scratch/dong.r/Dataset/unprocessed/ICDAR2017/'
+folder_input = '/gss_gpfs_scratch/dong.r/Dataset/unprocessed/ICDAR2017/'
 folder_dataset = ['eng_monograph', 'eng_periodical']
-folder_out = {'eng_monograph': '/scratch/dong.r/Dataset/OCR/monograph/',
-              'eng_periodical': '/scratch/dong.r/Dataset/OCR/periodical/'}
+folder_out = {'eng_monograph': '/gss_gpfs_scratch/dong.r/Dataset/OCR/monograph/',
+              'eng_periodical': '/gss_gpfs_scratch/dong.r/Dataset/OCR/periodical/'}
 
 
 def split_data():

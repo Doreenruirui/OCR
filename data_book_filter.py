@@ -3,7 +3,7 @@ import os
 import sys
 import re
 
-folder_data = '/scratch/dong.r/Dataset/OCR'
+folder_data = '/gss_gpfs_scratch/dong.r/Dataset/OCR'
 arg_folder = sys.argv[1]
 arg_train = sys.argv[2]
 arg_out = sys.argv[3]

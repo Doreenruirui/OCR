@@ -181,11 +181,11 @@ def process_data():
 
 data = sys.argv[1]
 if data == 'richmond':
-    folder_data = '/scratch/dong.r/Dataset/unprocessed/witnesses.json'
-    folder_out = '/scratch/dong.r/Dataset/OCR/richmond'
+    folder_data = '/gss_gpfs_scratch/dong.r/Dataset/unprocessed/witnesses.json'
+    folder_out = '/gss_gpfs_scratch/dong.r/Dataset/OCR/richmond'
 elif data == 'book':
     folder_data = '/home/dasmith/work/corpora/ia/tcp-books-p09-a20-pre1800.wits/witnesses.json'
-    folder_out = '/scratch/dong.r/Dataset/OCR/book1800'
+    folder_out = '/gss_gpfs_scratch/dong.r/Dataset/OCR/book1800'
 
 process_data()
 merge_file()

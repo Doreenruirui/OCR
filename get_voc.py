@@ -2,7 +2,7 @@ import sys
 import re
 from os.path import join as pjoin
 
-folder_data = '/scratch/dong.r/Dataset/OCR/lm/char/'
+folder_data = '/gss_gpfs_scratch/dong.r/Dataset/OCR/lm/char/'
 folder_lm = sys.argv[1]
 filename = pjoin(folder_data, folder_lm, 'train.text')
 dict_voc = {}

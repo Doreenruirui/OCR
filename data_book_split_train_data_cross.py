@@ -206,7 +206,7 @@ def get_train_data(train_id, split_id, train):
     out_info.close()
 
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/book1800/single'
+folder_multi = '/gss_gpfs_scratch/dong.r/Dataset/OCR/book1800/single'
 arg_num_fold = int(sys.argv[1])
 arg_train_id = int(sys.argv[2])
 split_train_test(arg_num_fold, arg_train_id)

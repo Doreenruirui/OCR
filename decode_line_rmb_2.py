@@ -24,7 +24,7 @@ from multiprocessing import Pool
 from levenshtein import align
 
 
-folder_data = '/scratch/dong.r/Dataset/OCR/'
+folder_data = '/gss_gpfs_scratch/dong.r/Dataset/OCR/'
 data_dir = ''
 out_dir = ''
 lm_dir = ''

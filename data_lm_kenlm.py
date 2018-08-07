@@ -1,6 +1,6 @@
 from os.path import join as pjoin
 
-folder_data = '/scratch/dong.r/Dataset/OCR/lm/char'
+folder_data = '/gss_gpfs_scratch/dong.r/Dataset/OCR/lm/char'
 #folder_lm = 'richmond_0_0_low'
 folder_lm = 'nyt_low'
 

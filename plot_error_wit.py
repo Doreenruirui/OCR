@@ -4,7 +4,7 @@ import numpy as np
 import sys
 import matplotlib.pyplot as plt
 
-# folder_data = '/scratch/dong.r/Dataset/OCR'
+# folder_data = '/gss_gpfs_scratch/dong.r/Dataset/OCR'
 folder_data = '/home/rui/Dataset/OCR'
 
 

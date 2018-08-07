@@ -10,7 +10,7 @@ dict_char2id = {}
 dict_id2char = {}
 dict_word2id = {}
 dict_id2word = {}
-file_voc = ''
+file_voc = '/gss_gpfs_scratch/dong.r/Dataset/OCR/voc/ascii.syms'
 tbl = None
 lm = None
 concat_f = None
@@ -59,7 +59,7 @@ def initialize_score(folder_voc, folder_lm):
     lm = fst.Fst.read(pjoin(folder_lm, 'train.mod'))
     file_voc = pjoin(folder_voc, 'ascii.syms')
     tbl = fst.SymbolTable.read_text(file_voc)
-    concat_f = fst.Fst.read('/scratch/dong.r/Dataset/OCR/lm/concat.fst')
+    concat_f = fst.Fst.read('/gss_gpfs_scratch/dong.r/Dataset/OCR/lm/concat.fst')
     get_dict()
     list_voc = []
     for line in file(pjoin(folder_lm, 'voc')):
@@ -74,10 +74,10 @@ def initialize_score(folder_voc, folder_lm):
 
 def initialize(folder_lm):
     global lm, tbl, concat_f, file_voc
-    file_voc = '/scratch/dong.r/Dataset/OCR/voc/ascii.syms'
+    file_voc = '/gss_gpfs_scratch/dong.r/Dataset/OCR/voc/ascii.syms'
     lm = fst.Fst.read(pjoin(folder_lm,'train.mod'))
     tbl = fst.SymbolTable.read_text(file_voc)
-    concat_f = fst.Fst.read('/scratch/dong.r/Dataset/OCR/lm/concat.fst')
+    concat_f = fst.Fst.read('/gss_gpfs_scratch/dong.r/Dataset/OCR/lm/concat.fst')
     get_dict()
 
 
@@ -425,4 +425,4 @@ def test():
     # f4 = normalize_weight(f3)
     print f5
 
-# test()
+test()

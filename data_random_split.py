@@ -4,7 +4,7 @@ import os
 import sys
 
 
-folder_multi = '/scratch/dong.r/Dataset/OCR'
+folder_multi = '/gss_gpfs_scratch/dong.r/Dataset/OCR'
 
 
 def shuffle_index(cur_folder, train):

@@ -30,7 +30,7 @@ import numpy as np
 from six.moves import xrange
 import tensorflow as tf
 
-import nlc_model as nlc_model
+import nlc_model_classic as nlc_model
 from flag import FLAGS
 from util_random import pair_iter, initialize_vocabulary
 

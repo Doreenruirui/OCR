@@ -39,7 +39,7 @@ def split_train_test(num_fold, split_id):
              {'train': train_date, 'test': test_date})
 
 
-folder_multi = join('/scratch/dong.r/Dataset/OCR/', sys.argv[1])
+folder_multi = join('/gss_gpfs_scratch/dong.r/Dataset/OCR/', sys.argv[1])
 arg_num_fold = int(sys.argv[2])
 arg_train_id = int(sys.argv[3])
 split_train_test(arg_num_fold, arg_train_id)

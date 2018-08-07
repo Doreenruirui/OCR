@@ -181,7 +181,7 @@ def write_man_wit():
     out_info.close()
 
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/richmond'
+folder_multi = '/gss_gpfs_scratch/dong.r/Dataset/OCR/richmond'
 
 train_ratio = 0.8
 tid = 0

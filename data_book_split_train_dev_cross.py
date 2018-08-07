@@ -147,7 +147,7 @@ def get_train_data(train_id, split_id, train):
     out_info.close()
 
 
-folder_multi = join('/scratch/dong.r/Dataset/OCR/', sys.argv[1])
+folder_multi = join('/gss_gpfs_scratch/dong.r/Dataset/OCR/', sys.argv[1])
 arg_num_fold = int(sys.argv[2])
 arg_train_id = int(sys.argv[3])
 arg_dev_id = int(sys.argv[4])

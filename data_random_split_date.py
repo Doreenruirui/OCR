@@ -5,7 +5,7 @@ import sys
 from collections import OrderedDict
 
 
-folder_multi = '/scratch/dong.r/Dataset/OCR'
+folder_multi = '/gss_gpfs_scratch/dong.r/Dataset/OCR'
 
 
 def get_train_info(cur_folder, train):

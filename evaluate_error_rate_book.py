@@ -5,7 +5,7 @@ import sys
 from collections import OrderedDict
 
 # folder_data = '/Users/doreen/Documents/Experiment/dataset/OCR/'
-folder_data = '/scratch/dong.r/Dataset/OCR'
+folder_data = '/gss_gpfs_scratch/dong.r/Dataset/OCR'
 
 
 def evaluate_by_book(cur_folder, prefix, eval_prefix, col, nline):

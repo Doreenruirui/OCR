@@ -4,7 +4,7 @@ import sys
 import plot_curve
 
 
-folder_data = '/scratch/dong.r/Dataset/OCR/'
+folder_data = '/gss_gpfs_scratch/dong.r/Dataset/OCR/'
 
 
 def error_rate(dis_xy, len_y):

@@ -95,8 +95,8 @@ def decode():
 
 def main():
     global out_dir, data_dir, dev, start, end, nthread, beam_size, weight1, weight2, lm_dir
-    data_dir = '/scratch/dong.r/Dataset/OCR/' + sys.argv[1]
-    out_dir = '/scratch/dong.r/Dataset/OCR/' + sys.argv[1] + '/' + sys.argv[2]
+    data_dir = '/gss_gpfs_scratch/dong.r/Dataset/OCR/' + sys.argv[1]
+    out_dir = '/gss_gpfs_scratch/dong.r/Dataset/OCR/' + sys.argv[1] + '/' + sys.argv[2]
     dev = sys.argv[3]
     start = int(sys.argv[4])
     end = int(sys.argv[5])

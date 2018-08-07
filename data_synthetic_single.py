@@ -5,7 +5,7 @@ import numpy as np
 import re
 
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/'
+folder_multi = '/gss_gpfs_scratch/dong.r/Dataset/OCR/'
 
 
 def remove_nonascii(text):

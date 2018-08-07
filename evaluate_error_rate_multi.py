@@ -9,7 +9,7 @@ import string
 
 
 # folder_data = '/Users/doreen/Documents/Experiment/dataset/OCR/'
-folder_data = '/scratch/dong.r/Dataset/OCR'
+folder_data = '/gss_gpfs_scratch/dong.r/Dataset/OCR'
 
 
 def remove(text):
@@ -35,8 +35,8 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
     list_top = []
     for line in file(file_name):
         line_id += 1
-        cur_str = line.strip()
-        # cur_str = line.strip().lower()
+        #cur_str = line.strip()
+        cur_str = line.strip().lower()
         #cur_str = cur_str.translate(None, string.punctuation)
         # cur_str = ' '.join([ele for ele in cur_str.split(' ') if len(ele) > 0])
         if line_id % beam_size == 1:
@@ -50,8 +50,8 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
     if end == -1:
         end = len(list_dec)
     with open(pjoin(folder_data, prefix + '.y.txt'), 'r') as f_:
-        # list_y_old = [ele.strip().lower() for ele in f_.readlines()][start:end]
-        list_y_old = [ele.strip() for ele in f_.readlines()][start:end]
+        list_y_old = [ele.strip().lower() for ele in f_.readlines()][start:end]
+        #list_y_old = [ele.strip() for ele in f_.readlines()][start:end]
         list_y = []
         for ele in list_y_old:
             #ele = ele.translate(None, string.punctuation)
@@ -79,20 +79,20 @@ def evaluate_multi(folder_name, out_folder, prefix='dev', beam_size=100, start=0
         else:
             outfile = pjoin(folder_data, out_folder, prefix + '.ew.txt.' + str(start) + '_' + str(end))
     np.savetxt(outfile, dis, fmt='%d')
-    if flag_char:
-        outfile = pjoin(folder_data, out_folder, prefix + '.topc.txt.' + str(start) + '_' + str(end))
-    else:
-        outfile = pjoin(folder_data, out_folder, prefix + '.topw.txt.' + str(start) + '_' + str(end))
-    with open(outfile, 'w') as f_:
-        for cur_str in list_top:
-            f_.write(cur_str + '\n')
-    if flag_char:
-        outfile = pjoin(folder_data, out_folder, prefix + '.bsc.txt.' + str(start) + '_' + str(end))
-    else:
-        outfile = pjoin(folder_data, out_folder, prefix + '.bsw.txt.' + str(start) + '_' + str(end))
-    with open(outfile, 'w') as f_:
-        for cur_str in best_str:
-            f_.write(cur_str + '\n')
+    #if flag_char:
+    #    outfile = pjoin(folder_data, out_folder, prefix + '.topc.txt.' + str(start) + '_' + str(end))
+    #else:
+    #    outfile = pjoin(folder_data, out_folder, prefix + '.topw.txt.' + str(start) + '_' + str(end))
+    #with open(outfile, 'w') as f_:
+    #    for cur_str in list_top:
+    #        f_.write(cur_str + '\n')
+    #if flag_char:
+    #    outfile = pjoin(folder_data, out_folder, prefix + '.bsc.txt.' + str(start) + '_' + str(end))
+    #else:
+    #    outfile = pjoin(folder_data, out_folder, prefix + '.bsw.txt.' + str(start) + '_' + str(end))
+    #with open(outfile, 'w') as f_:
+    #    for cur_str in best_str:
+    #        f_.write(cur_str + '\n')
 
 
 cur_folder = sys.argv[1]

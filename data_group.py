@@ -3,7 +3,7 @@ import sys
 from collections import OrderedDict
 
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/multi'
+folder_multi = '/gss_gpfs_scratch/dong.r/Dataset/OCR/multi'
 
 
 def get_train_data(folder_data, train):

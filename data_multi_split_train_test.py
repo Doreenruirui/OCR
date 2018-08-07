@@ -209,7 +209,7 @@ def get_train_data(train_id, split_id, error_ratio, train):
     out_y.close()
     out_info.close()
 
-folder_multi = '/scratch/dong.r/Dataset/OCR/richmond/single'
+folder_multi = '/gss_gpfs_scratch/dong.r/Dataset/OCR/richmond/single'
 # check_manual()
 get_all_date()
 #split_train_test(0.8, 0)

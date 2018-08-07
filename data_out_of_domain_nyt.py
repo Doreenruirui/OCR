@@ -30,7 +30,7 @@ def one_book(bookname):
         while num_char < len_line:
             cur_num = int(np.floor(np.random.randn() * 5 + 45))
             cur_num = min(70, cur_num)
-            cur_num = max(0, cur_num)
+            cur_num = max(1, cur_num)
             cur_num = min(cur_num, len_line - num_char)
             cur_str = line[num_char : num_char + cur_num]
             output_lines.append(cur_str)
@@ -81,7 +81,7 @@ def get_books(input_folder, output_folder, max_lines):
         cur_file = input_files[cur_no]
         lines = one_book(os.path.join(input_folder, cur_file))
         cur_num = len(lines)
-        true_num = min(cur_num, max_lines - num_line, 10000)
+        true_num = min(cur_num, max_lines - num_line, 30000)
         cur_rand = np.arange(true_num)
         np.random.shuffle(cur_rand)
         f_y.write('\n'.join([lines[line_id] for line_id in cur_rand]) + '\n')

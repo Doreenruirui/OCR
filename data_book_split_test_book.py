@@ -4,7 +4,7 @@ import os
 import sys
 
 
-folder_data = '/scratch/dong.r/Dataset/OCR'
+folder_data = '/gss_gpfs_scratch/dong.r/Dataset/OCR'
 
 
 def split_test_book(cur_folder, prefix):

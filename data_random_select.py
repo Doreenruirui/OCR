@@ -4,7 +4,7 @@ import os
 import sys
 
 
-folder_root = '/scratch/dong.r/Dataset/OCR'
+folder_root = '/gss_gpfs_scratch/dong.r/Dataset/OCR'
 
 
 def get_random_index(folder_in, train):
@@ -19,7 +19,7 @@ def get_random_index(folder_in, train):
 
 def get_train_data(folder_in, train_ratio, prefix, list_postfix):
     folder_data = join(folder_root, folder_in)
-    rand_index = np.loadtxt(join(folder_data, prefix + '.index.txt'))
+    rand_index = np.loadtxt(join(folder_data, prefix + '.index.txt'), dtype=int)
     num_line = len(rand_index)
     num_train = int(np.floor(num_line * train_ratio * 0.01))
     train_index = rand_index[:num_train]
@@ -43,5 +43,5 @@ if task == 0:
     get_random_index(arg_folder, arg_train)
 else:
     arg_train_ratio = float(sys.argv[4])
-    arg_postfix = sys.argv[5].split(';')
+    arg_postfix = sys.argv[5].split('_')
     get_train_data(arg_folder, arg_train_ratio, arg_train, arg_postfix)

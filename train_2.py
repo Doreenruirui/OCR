@@ -85,9 +85,8 @@ def train():
 
     with open(os.path.join(FLAGS.train_dir, "flags.json"), 'w') as fout:
         json.dump(FLAGS.__flags, fout)
-   # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.gpu_frac)
-    #with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)) as sess:
-    with tf.Session() as sess:
+    #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAG    S.gpu_frac)
+    with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)) as sess:
         logging.info("Creating %d layers of %d units." % (FLAGS.num_layers, FLAGS.size))
         model, epoch = create_model(sess, vocab_size, False)
 

@@ -4,7 +4,7 @@ import sys
 from os.path import join as pjoin
 import re
 
-folder_data = '/scratch/dong.r/Dataset/OCR/'
+folder_data = '/gss_gpfs_scratch/dong.r/Dataset/OCR/'
 #cur_folder = 'book/0/0/50/test_20/20/'
 #cur_folder = 'multi/0/0/50/test/'
 cur_folder = sys.argv[1]

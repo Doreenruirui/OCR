@@ -26,7 +26,7 @@ import kenlm
 from levenshtein import align_pair, align
 
 
-folder_data = '/scratch/dong.r/Dataset/OCR/'
+folder_data = '/gss_gpfs_scratch/dong.r/Dataset/OCR/'
 data_dir = ''
 out_dir = ''
 lm_dir1 = ''
